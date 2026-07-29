@@ -370,7 +370,8 @@ function renderTicker(){
     });
   });
   el.innerHTML = items.join("") + items.join(""); // duplicate for seamless loop
-  document.getElementById("headerMeta").innerHTML = `Toplam ${Object.values(PORTFOLIOS).reduce((s,p)=>s+p.rows.length,0)} kayıt · USD/TRY: ${usdTry.toFixed(2)}`;
+  const bugun = new Date().toLocaleDateString("tr-TR", {day:"2-digit", month:"long", year:"numeric", weekday:"long"});
+  document.getElementById("headerMeta").innerHTML = `${bugun}<br>Toplam ${Object.values(PORTFOLIOS).reduce((s,p)=>s+p.rows.length,0)} kayıt · USD/TRY: ${usdTry.toFixed(2)}`;
 }
 
 /* ============================= TABS ============================= */
