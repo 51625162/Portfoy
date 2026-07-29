@@ -13,7 +13,15 @@
 
 <div class="ticker-wrap"><div class="ticker" id="tickerTape"></div></div>
 
-<div class="banner">Veriler bu tarayıcıda kalıcı olarak saklanır (localStorage) — sayfayı kapatıp açsanız da kaybolmaz. <button class="btn btn-sm" style="margin-left:10px;" onclick="resetToSamples()">Örnek verilere sıfırla</button></div>
+<div class="banner">
+  Veriler bu tarayıcıda kalıcı olarak saklanır — cihazlar arasında görünmesi için bulut senkron kurun.
+  <button class="btn btn-sm" style="margin-left:10px;" onclick="toggleCloudPanel()">☁ Bulut Senkron</button>
+  <button class="btn btn-sm" onclick="exportAllData()">⭳ Dışa Aktar</button>
+  <button class="btn btn-sm" onclick="document.getElementById('importFile').click()">⭱ İçe Aktar</button>
+  <input type="file" id="importFile" accept="application/json" style="display:none">
+  <button class="btn btn-sm" onclick="resetToSamples()">Örnek verilere sıfırla</button>
+</div>
+<div id="cloudPanel" style="display:none; max-width:1280px; margin:14px auto 0; padding:0 28px;"></div>
 
 <header>
   <div class="brand">

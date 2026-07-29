@@ -44,28 +44,36 @@ let sortState = {bist:{col:null,dir:1}, abd:{col:null,dir:1}, fon:{col:null,dir:
 const STORAGE_KEY = "portfoyTakipData_v1";
 let storageAvailable = true;
 
+function buildPayload(){
+  return {
+    usdTry,
+    nextId,
+    rows: { bist:PORTFOLIOS.bist.rows, abd:PORTFOLIOS.abd.rows, fon:PORTFOLIOS.fon.rows },
+  };
+}
+
+function applyPayload(payload){
+  if(!payload) return false;
+  if(payload.usdTry) usdTry = payload.usdTry;
+  if(payload.nextId) nextId = payload.nextId;
+  if(payload.rows){
+    ["bist","abd","fon"].forEach(k => { if(Array.isArray(payload.rows[k])) PORTFOLIOS[k].rows = payload.rows[k]; });
+  }
+  return true;
+}
+
 function saveState(){
-  if(!storageAvailable) return;
-  try{
-    const payload = {
-      usdTry,
-      nextId,
-      rows: { bist:PORTFOLIOS.bist.rows, abd:PORTFOLIOS.abd.rows, fon:PORTFOLIOS.fon.rows },
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-  } catch(e){ storageAvailable = false; }
+  if(storageAvailable){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(buildPayload())); }
+    catch(e){ storageAvailable = false; }
+  }
+  pushToCloud();
 }
 
 function loadState(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
-    if(!raw) return;
-    const payload = JSON.parse(raw);
-    if(payload.usdTry) usdTry = payload.usdTry;
-    if(payload.nextId) nextId = payload.nextId;
-    if(payload.rows){
-      ["bist","abd","fon"].forEach(k => { if(Array.isArray(payload.rows[k])) PORTFOLIOS[k].rows = payload.rows[k]; });
-    }
+    if(raw) applyPayload(JSON.parse(raw));
   } catch(e){ storageAvailable = false; }
 }
 
@@ -73,6 +81,178 @@ function resetToSamples(){
   if(!confirm("Tüm veriler örnek başlangıç verilerine döndürülecek. Emin misiniz?")) return;
   try{ localStorage.removeItem(STORAGE_KEY); } catch(e){}
   location.reload();
+}
+
+/* ---------- JSON dosyasıyla dışa / içe aktarma ---------- */
+function exportAllData(){
+  const payload = buildPayload();
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const tarih = new Date().toISOString().slice(0,10);
+  a.href = url; a.download = `portfoy_yedek_${tarih}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importAllData(file){
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try{
+      const payload = JSON.parse(e.target.result);
+      if(!payload || !payload.rows) throw new Error("geçersiz dosya");
+      applyPayload(payload);
+      saveState();
+      renderMain();
+      alert("Veriler başarıyla içe aktarıldı.");
+    } catch(err){
+      alert("Dosya okunamadı — geçerli bir portföy yedek dosyası (.json) seçtiğinizden emin olun.");
+    }
+  };
+  reader.readAsText(file);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const fileInput = document.getElementById("importFile");
+  if(fileInput){
+    fileInput.addEventListener("change", (e) => {
+      if(e.target.files && e.target.files[0]) importAllData(e.target.files[0]);
+      e.target.value = "";
+    });
+  }
+});
+
+/* ============================= BULUT SENKRON (JSONBin.io) ============================= */
+const CLOUD_CONFIG_KEY = "portfoyCloudConfig_v1";
+let cloudSyncing = false;
+let cloudLastSync = null;
+
+function getCloudConfig(){
+  try{
+    const raw = localStorage.getItem(CLOUD_CONFIG_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e){ return null; }
+}
+function setCloudConfig(cfg){
+  try{ localStorage.setItem(CLOUD_CONFIG_KEY, JSON.stringify(cfg)); } catch(e){}
+}
+function clearCloudConfig(){
+  try{ localStorage.removeItem(CLOUD_CONFIG_KEY); } catch(e){}
+}
+
+async function jsonbinRequest(url, options){
+  const res = await fetch(url, options);
+  if(!res.ok) throw new Error("JSONBin isteği başarısız: " + res.status);
+  return res.json();
+}
+
+async function createCloudBin(apiKey){
+  const data = await jsonbinRequest("https://api.jsonbin.io/v3/b", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json", "X-Master-Key":apiKey, "X-Bin-Private":"true", "X-Bin-Name":"Portfoy Takip" },
+    body: JSON.stringify(buildPayload()),
+  });
+  return data.metadata.id;
+}
+
+async function pushToCloud(){
+  const cfg = getCloudConfig();
+  if(!cfg || !cfg.apiKey || !cfg.binId) return;
+  cloudSyncing = true; updateCloudStatus();
+  try{
+    await jsonbinRequest(`https://api.jsonbin.io/v3/b/${cfg.binId}`, {
+      method:"PUT",
+      headers:{ "Content-Type":"application/json", "X-Master-Key":cfg.apiKey },
+      body: JSON.stringify(buildPayload()),
+    });
+    cloudLastSync = new Date();
+  } catch(e){ console.warn("Buluta kaydedilemedi:", e.message); }
+  cloudSyncing = false; updateCloudStatus();
+}
+
+async function pullFromCloud(silent){
+  const cfg = getCloudConfig();
+  if(!cfg || !cfg.apiKey || !cfg.binId) return false;
+  cloudSyncing = true; updateCloudStatus();
+  try{
+    const data = await jsonbinRequest(`https://api.jsonbin.io/v3/b/${cfg.binId}/latest`, {
+      headers:{ "X-Master-Key":cfg.apiKey },
+    });
+    applyPayload(data.record);
+    cloudLastSync = new Date();
+    cloudSyncing = false; updateCloudStatus();
+    return true;
+  } catch(e){
+    cloudSyncing = false; updateCloudStatus();
+    if(!silent) alert("Buluttan veri çekilemedi — API anahtarı/Bin ID doğru mu, internet bağlantınız var mı kontrol edin.");
+    return false;
+  }
+}
+
+function updateCloudStatus(){
+  const el = document.getElementById("cloudStatus");
+  if(!el) return;
+  const cfg = getCloudConfig();
+  if(!cfg || !cfg.apiKey || !cfg.binId){ el.textContent = "Bulut senkron kapalı"; return; }
+  if(cloudSyncing){ el.textContent = "Senkronize ediliyor…"; return; }
+  el.textContent = cloudLastSync ? `Son senkron: ${cloudLastSync.toLocaleTimeString("tr-TR")}` : "Bağlı — henüz senkron olmadı";
+}
+
+function toggleCloudPanel(){
+  const el = document.getElementById("cloudPanel");
+  el.style.display = el.style.display === "none" ? "block" : "none";
+  if(el.style.display === "block") renderCloudPanel();
+}
+
+function renderCloudPanel(){
+  const el = document.getElementById("cloudPanel");
+  const cfg = getCloudConfig() || {apiKey:"", binId:""};
+  el.innerHTML = `
+    <div class="drawer open" style="max-width:520px;">
+      <h3>☁ Bulut Senkron Ayarları (JSONBin.io)</h3>
+      <p style="font-size:12.5px; color:var(--text-soft); margin-top:-6px;">
+        jsonbin.io adresinden ücretsiz hesap açıp "X-Master-Key" alın. Aynı API Key ve Bin ID'yi tüm cihazlarınıza girerseniz
+        veriler otomatik senkronize olur.
+      </p>
+      <div class="field-grid">
+        <div class="field"><label>API Key (X-Master-Key)</label><input id="cfgApiKey" type="text" value="${cfg.apiKey||""}"></div>
+        <div class="field"><label>Bin ID (varsa)</label><input id="cfgBinId" type="text" value="${cfg.binId||""}"></div>
+      </div>
+      <div class="drawer-actions" style="flex-wrap:wrap;">
+        <button class="btn btn-accent" id="btnCreateBin">Yeni Bin Oluştur</button>
+        <button class="btn" id="btnConnect">Kaydet ve Buluttan Yükle</button>
+        <button class="btn" id="btnPushNow">Şimdi Buluta Gönder</button>
+        <button class="btn btn-danger" id="btnDisconnect">Bağlantıyı Kaldır</button>
+      </div>
+      <div id="cloudStatus" style="margin-top:10px; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text-soft);"></div>
+    </div>
+  `;
+  updateCloudStatus();
+
+  document.getElementById("btnCreateBin").onclick = async () => {
+    const apiKey = document.getElementById("cfgApiKey").value.trim();
+    if(!apiKey){ alert("Önce API Key girin."); return; }
+    try{
+      const binId = await createCloudBin(apiKey);
+      setCloudConfig({apiKey, binId});
+      alert("Yeni bin oluşturuldu. Bin ID: " + binId + "\nBu ID'yi diğer cihazlarınıza da girin.");
+      renderCloudPanel();
+    } catch(e){ alert("Bin oluşturulamadı: " + e.message); }
+  };
+  document.getElementById("btnConnect").onclick = async () => {
+    const apiKey = document.getElementById("cfgApiKey").value.trim();
+    const binId = document.getElementById("cfgBinId").value.trim();
+    if(!apiKey || !binId){ alert("API Key ve Bin ID girin."); return; }
+    setCloudConfig({apiKey, binId});
+    const ok = await pullFromCloud();
+    if(ok){ renderMain(); renderCloudPanel(); }
+  };
+  document.getElementById("btnPushNow").onclick = () => pushToCloud();
+  document.getElementById("btnDisconnect").onclick = () => {
+    if(!confirm("Bulut bağlantısı kaldırılsın mı? (Bulutdaki veri silinmez, sadece bu cihazın bağlantısı kesilir.)")) return;
+    clearCloudConfig();
+    renderCloudPanel();
+  };
 }
 
 /* ============================= HESAPLAMALAR ============================= */
@@ -594,3 +774,4 @@ function renderOverview(){
 /* ============================= INIT ============================= */
 loadState();
 renderMain();
+pullFromCloud(true).then(ok => { if(ok) renderMain(); });
