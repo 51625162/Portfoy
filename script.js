@@ -1,36 +1,71 @@
 /* ============================= VERİ MODELİ ============================= */
+function daysAgoISO(n){
+  const d = new Date(); d.setDate(d.getDate()-n); return d.toISOString().slice(0,10);
+}
+function seedHistory(historyArr, kod, guncel, dunku, hafta, yil, ucYil){
+  historyArr.push(
+    {kod, tarih: daysAgoISO(1095), fiyat: ucYil},
+    {kod, tarih: daysAgoISO(365), fiyat: yil},
+    {kod, tarih: daysAgoISO(7), fiyat: hafta},
+    {kod, tarih: daysAgoISO(1), fiyat: dunku},
+    {kod, tarih: daysAgoISO(0), fiyat: guncel},
+  );
+}
+
 const PORTFOLIOS = {
   bist: {
     label:"BIST Portföy", currency:"TL", accent:"#d9a441", idLabel:"Hisse Kodu",
     rows:[
-      {id:1, kod:"ASELS", adet:500, alis:62.50, alisTarihi:"2025-03-10", guncel:68.90, dunku:68.20, hafta:66.10, yil:45.30, ucYil:22.10},
-      {id:2, kod:"THYAO", adet:200, alis:275.00, alisTarihi:"2025-06-02", guncel:298.50, dunku:301.00, hafta:290.00, yil:260.00, ucYil:130.00},
-      {id:3, kod:"OTOKAR", adet:50, alis:1450.00, alisTarihi:"2024-11-20", guncel:1620.00, dunku:1600.00, hafta:1580.00, yil:1100.00, ucYil:650.00},
-      {id:4, kod:"LOGO", adet:300, alis:38.20, alisTarihi:"2025-01-15", guncel:41.10, dunku:40.80, hafta:39.50, yil:30.00, ucYil:18.50},
-      {id:5, kod:"PGSUS", adet:100, alis:410.00, alisTarihi:"2025-05-05", guncel:455.00, dunku:450.00, hafta:430.00, yil:350.00, ucYil:210.00},
+      {id:1, kod:"ASELS", adet:500, alis:62.50, alisTarihi:"2025-03-10", guncel:68.90},
+      {id:2, kod:"THYAO", adet:200, alis:275.00, alisTarihi:"2025-06-02", guncel:298.50},
+      {id:3, kod:"OTOKAR", adet:50, alis:1450.00, alisTarihi:"2024-11-20", guncel:1620.00},
+      {id:4, kod:"LOGO", adet:300, alis:38.20, alisTarihi:"2025-01-15", guncel:41.10},
+      {id:5, kod:"PGSUS", adet:100, alis:410.00, alisTarihi:"2025-05-05", guncel:455.00},
     ],
+    history:[],
   },
   abd: {
     label:"ABD Portföy", currency:"$", accent:"#4f8fd1", idLabel:"Hisse Kodu",
     rows:[
-      {id:1, kod:"AAPL", adet:20, alis:175.00, alisTarihi:"2025-02-10", guncel:214.50, dunku:213.00, hafta:208.00, yil:180.00, ucYil:130.00},
-      {id:2, kod:"MSFT", adet:15, alis:340.00, alisTarihi:"2025-04-05", guncel:415.00, dunku:412.50, hafta:400.00, yil:340.00, ucYil:250.00},
-      {id:3, kod:"NVDA", adet:30, alis:480.00, alisTarihi:"2025-01-20", guncel:890.00, dunku:875.00, hafta:820.00, yil:480.00, ucYil:140.00},
-      {id:4, kod:"TSLA", adet:10, alis:210.00, alisTarihi:"2025-06-12", guncel:245.00, dunku:250.00, hafta:230.00, yil:180.00, ucYil:220.00},
-      {id:5, kod:"AMZN", adet:12, alis:145.00, alisTarihi:"2025-03-18", guncel:188.00, dunku:186.00, hafta:178.00, yil:150.00, ucYil:95.00},
+      {id:1, kod:"AAPL", adet:20, alis:175.00, alisTarihi:"2025-02-10", guncel:214.50},
+      {id:2, kod:"MSFT", adet:15, alis:340.00, alisTarihi:"2025-04-05", guncel:415.00},
+      {id:3, kod:"NVDA", adet:30, alis:480.00, alisTarihi:"2025-01-20", guncel:890.00},
+      {id:4, kod:"TSLA", adet:10, alis:210.00, alisTarihi:"2025-06-12", guncel:245.00},
+      {id:5, kod:"AMZN", adet:12, alis:145.00, alisTarihi:"2025-03-18", guncel:188.00},
     ],
+    history:[],
   },
   fon: {
     label:"Fon Portföy", currency:"TL", accent:"#3fb6a8", idLabel:"Fon Kodu",
     rows:[
-      {id:1, kod:"AFT", adet:1500, alis:1.85, alisTarihi:"2025-02-20", guncel:2.10, dunku:2.08, hafta:2.02, yil:1.55, ucYil:0.95},
-      {id:2, kod:"TTE", adet:800, alis:3.40, alisTarihi:"2025-05-15", guncel:3.72, dunku:3.70, hafta:3.60, yil:2.90, ucYil:1.80},
-      {id:3, kod:"GPB", adet:2000, alis:0.92, alisTarihi:"2025-01-08", guncel:1.05, dunku:1.04, hafta:1.00, yil:0.78, ucYil:0.48},
-      {id:4, kod:"IPJ", adet:600, alis:5.10, alisTarihi:"2025-06-25", guncel:5.55, dunku:5.50, hafta:5.35, yil:4.20, ucYil:2.60},
-      {id:5, kod:"MAC", adet:1200, alis:2.30, alisTarihi:"2025-03-30", guncel:2.48, dunku:2.46, hafta:2.38, yil:1.95, ucYil:1.20},
+      {id:1, kod:"AFT", adet:1500, alis:1.85, alisTarihi:"2025-02-20", guncel:2.10},
+      {id:2, kod:"TTE", adet:800, alis:3.40, alisTarihi:"2025-05-15", guncel:3.72},
+      {id:3, kod:"GPB", adet:2000, alis:0.92, alisTarihi:"2025-01-08", guncel:1.05},
+      {id:4, kod:"IPJ", adet:600, alis:5.10, alisTarihi:"2025-06-25", guncel:5.55},
+      {id:5, kod:"MAC", adet:1200, alis:2.30, alisTarihi:"2025-03-30", guncel:2.48},
     ],
+    history:[],
   },
 };
+
+seedHistory(PORTFOLIOS.bist.history, "ASELS", 68.90, 68.20, 66.10, 45.30, 22.10);
+seedHistory(PORTFOLIOS.bist.history, "THYAO", 298.50, 301.00, 290.00, 260.00, 130.00);
+seedHistory(PORTFOLIOS.bist.history, "OTOKAR", 1620.00, 1600.00, 1580.00, 1100.00, 650.00);
+seedHistory(PORTFOLIOS.bist.history, "LOGO", 41.10, 40.80, 39.50, 30.00, 18.50);
+seedHistory(PORTFOLIOS.bist.history, "PGSUS", 455.00, 450.00, 430.00, 350.00, 210.00);
+
+seedHistory(PORTFOLIOS.abd.history, "AAPL", 214.50, 213.00, 208.00, 180.00, 130.00);
+seedHistory(PORTFOLIOS.abd.history, "MSFT", 415.00, 412.50, 400.00, 340.00, 250.00);
+seedHistory(PORTFOLIOS.abd.history, "NVDA", 890.00, 875.00, 820.00, 480.00, 140.00);
+seedHistory(PORTFOLIOS.abd.history, "TSLA", 245.00, 250.00, 230.00, 180.00, 220.00);
+seedHistory(PORTFOLIOS.abd.history, "AMZN", 188.00, 186.00, 178.00, 150.00, 95.00);
+
+seedHistory(PORTFOLIOS.fon.history, "AFT", 2.10, 2.08, 2.02, 1.55, 0.95);
+seedHistory(PORTFOLIOS.fon.history, "TTE", 3.72, 3.70, 3.60, 2.90, 1.80);
+seedHistory(PORTFOLIOS.fon.history, "GPB", 1.05, 1.04, 1.00, 0.78, 0.48);
+seedHistory(PORTFOLIOS.fon.history, "IPJ", 5.55, 5.50, 5.35, 4.20, 2.60);
+seedHistory(PORTFOLIOS.fon.history, "MAC", 2.48, 2.46, 2.38, 1.95, 1.20);
+
 let nextId = {bist:6, abd:6, fon:6};
 let usdTry = 34.50; // kullanıcı güncelleyebilir
 
@@ -39,6 +74,7 @@ let activeTab = "bist";
 let editingId = {bist:null, abd:null, fon:null};
 let searchTerm = {bist:"", abd:"", fon:""};
 let sortState = {bist:{col:null,dir:1}, abd:{col:null,dir:1}, fon:{col:null,dir:1}};
+let historyEditor = null; // {key, rowId} açık olan fiyat geçmişi paneli
 
 /* ============================= KALICI SAKLAMA (localStorage) ============================= */
 const STORAGE_KEY = "portfoyTakipData_v1";
@@ -49,6 +85,7 @@ function buildPayload(){
     usdTry,
     nextId,
     rows: { bist:PORTFOLIOS.bist.rows, abd:PORTFOLIOS.abd.rows, fon:PORTFOLIOS.fon.rows },
+    history: { bist:PORTFOLIOS.bist.history, abd:PORTFOLIOS.abd.history, fon:PORTFOLIOS.fon.history },
   };
 }
 
@@ -58,6 +95,9 @@ function applyPayload(payload){
   if(payload.nextId) nextId = payload.nextId;
   if(payload.rows){
     ["bist","abd","fon"].forEach(k => { if(Array.isArray(payload.rows[k])) PORTFOLIOS[k].rows = payload.rows[k]; });
+  }
+  if(payload.history){
+    ["bist","abd","fon"].forEach(k => { if(Array.isArray(payload.history[k])) PORTFOLIOS[k].history = payload.history[k]; });
   }
   return true;
 }
@@ -256,11 +296,35 @@ function renderCloudPanel(){
 }
 
 /* ============================= HESAPLAMALAR ============================= */
-function computed(row){
-  const gunluk = safeDiv(row.guncel-row.dunku, row.dunku);
-  const haftalik = safeDiv(row.guncel-row.hafta, row.hafta);
-  const yillik = safeDiv(row.guncel-row.yil, row.yil);
-  const ucYillik = safeDiv(row.guncel-row.ucYil, row.ucYil);
+function lookupHistoricalPrice(history, kod, daysAgo){
+  const target = new Date();
+  target.setHours(0,0,0,0);
+  target.setDate(target.getDate()-daysAgo);
+  let best = null, bestDate = null;
+  history.forEach(h => {
+    if(h.kod !== kod) return;
+    const d = new Date(h.tarih);
+    d.setHours(0,0,0,0);
+    if(d.getTime() <= target.getTime() && (!bestDate || d.getTime() > bestDate.getTime())){
+      best = h.fiyat; bestDate = d;
+    }
+  });
+  return best;
+}
+function pctChange(current, past){
+  if(past===null||past===undefined||past===0||current===null||current===undefined||isNaN(current)) return null;
+  return (current-past)/past;
+}
+function computed(row, key){
+  const history = PORTFOLIOS[key].history || [];
+  const dunku = lookupHistoricalPrice(history, row.kod, 1);
+  const hafta = lookupHistoricalPrice(history, row.kod, 7);
+  const yil = lookupHistoricalPrice(history, row.kod, 365);
+  const ucYil = lookupHistoricalPrice(history, row.kod, 1095);
+  const gunluk = pctChange(row.guncel, dunku);
+  const haftalik = pctChange(row.guncel, hafta);
+  const yillik = pctChange(row.guncel, yil);
+  const ucYillik = pctChange(row.guncel, ucYil);
   const maliyet = row.adet*row.alis;
   const guncelDeger = row.adet*row.guncel;
   const karZarar = guncelDeger-maliyet;
@@ -272,7 +336,7 @@ function safeDiv(a,b){ return b ? a/b : null; }
 function portfolioTotals(key){
   const p = PORTFOLIOS[key];
   let maliyet=0, guncelDeger=0;
-  p.rows.forEach(r => { const c = computed(r); maliyet+=c.maliyet; guncelDeger+=c.guncelDeger; });
+  p.rows.forEach(r => { const c = computed(r,key); maliyet+=c.maliyet; guncelDeger+=c.guncelDeger; });
   const karZarar = guncelDeger-maliyet;
   const karZararPct = safeDiv(karZarar, maliyet);
   return {maliyet, guncelDeger, karZarar, karZararPct};
@@ -301,7 +365,7 @@ function renderTicker(){
   let items = [];
   Object.entries(PORTFOLIOS).forEach(([key,p]) => {
     p.rows.forEach(r => {
-      const c = computed(r);
+      const c = computed(r,key);
       items.push(`<span class="tick-item ${pctClass(c.gunluk)==='pos'?'up':pctClass(c.gunluk)==='neg'?'down':''}"><b>${r.kod}</b>${fmtPct(c.gunluk)}</span>`);
     });
   });
@@ -376,6 +440,7 @@ function renderPortfolioPanel(key){
 
   // ---- drawer ----
   if(editingId[key]!==null){ panel.appendChild(renderDrawer(key, editingId[key])); }
+  if(historyEditor && historyEditor.key===key){ panel.appendChild(renderHistoryDrawer(key, historyEditor.rowId)); }
 
   // ---- charts ----
   panel.appendChild(renderChartsSection(key));
@@ -413,7 +478,7 @@ function renderTable(key){
   table.appendChild(thead);
 
   const tbody = document.createElement("tbody");
-  let enriched = p.rows.map(r => ({row:r, c: computed(r)}));
+  let enriched = p.rows.map(r => ({row:r, c: computed(r,key)}));
   // best/worst by günlük %
   let bestId=null, worstId=null;
   if(enriched.length){
@@ -460,6 +525,7 @@ function renderTable(key){
         <td class="${pctClass(c.karZarar)}">${fmtMoney(c.karZarar,p.currency)}</td>
         <td class="${pctClass(c.karZararPct)}">${fmtPct(c.karZararPct)}</td>
         <td class="row-actions">
+          <button class="btn btn-sm" data-act="hist" data-id="${row.id}">Geçmiş</button>
           <button class="btn btn-sm" data-act="edit" data-id="${row.id}">Düzenle</button>
           <button class="btn btn-sm btn-danger" data-act="del" data-id="${row.id}">Sil</button>
         </td>`;
@@ -474,6 +540,7 @@ function renderTable(key){
       const id = Number(btn.dataset.id);
       if(btn.dataset.act==="edit"){ editingId[key]=id; renderMain(); }
       if(btn.dataset.act==="del"){ deleteRow(key,id); }
+      if(btn.dataset.act==="hist"){ historyEditor = {key, rowId:id}; renderMain(); }
     });
   });
   return wrap;
@@ -492,10 +559,6 @@ const FORM_FIELDS = [
   {key:"alis", label:"Alış Fiyatı", type:"number"},
   {key:"alisTarihi", label:"Alış Tarihi", type:"date"},
   {key:"guncel", label:"Güncel Fiyat", type:"number"},
-  {key:"dunku", label:"Dünkü Fiyat", type:"number"},
-  {key:"hafta", label:"1 Hafta Önce", type:"number"},
-  {key:"yil", label:"1 Yıl Önce", type:"number"},
-  {key:"ucYil", label:"3 Yıl Önce", type:"number"},
 ];
 
 function renderDrawer(key, id){
@@ -534,6 +597,85 @@ function renderDrawer(key, id){
   return drawer;
 }
 
+/* ---------- Fiyat Geçmişi paneli (değişim %'lerinin dayandığı kayıtlar) ---------- */
+function renderHistoryDrawer(key, rowId){
+  const p = PORTFOLIOS[key];
+  const row = p.rows.find(r=>r.id===rowId);
+  const drawer = document.createElement("div");
+  drawer.className = "drawer open";
+  drawer.style.setProperty("--accent", p.accent);
+
+  if(!row){
+    drawer.innerHTML = `<h3>Kayıt bulunamadı</h3>`;
+    return drawer;
+  }
+
+  const entries = p.history.filter(h=>h.kod===row.kod).sort((a,b)=> b.tarih.localeCompare(a.tarih));
+
+  drawer.innerHTML = `
+    <h3>📅 ${row.kod} — Fiyat Geçmişi</h3>
+    <p style="font-size:12.5px; color:var(--text-soft); margin-top:-6px;">
+      Günlük/Haftalık/Yıllık/3 Yıllık değişim yüzdeleri, buraya eklediğiniz geçmiş tarihli fiyatlara göre otomatik hesaplanır.
+      Örn. günlük değişim için dünün tarihli bir fiyat kaydı yeterlidir.
+    </p>
+    <div class="field-grid" style="grid-template-columns:1fr 1fr auto auto;">
+      <div class="field"><label>Tarih</label><input type="date" id="histTarih"></div>
+      <div class="field"><label>Fiyat</label><input type="number" step="any" id="histFiyat"></div>
+      <div class="field" style="align-self:flex-end;"><button class="btn btn-accent" id="btnAddHist">Ekle</button></div>
+      <div class="field" style="align-self:flex-end;"><button class="btn" id="btnTodayHist">Bugünü Kaydet</button></div>
+    </div>
+    <div class="table-wrap" style="margin-top:16px;">
+      <table>
+        <thead><tr><th>Tarih</th><th>Fiyat</th><th>İşlem</th></tr></thead>
+        <tbody>
+          ${entries.length ? entries.map(h => `
+            <tr>
+              <td style="text-align:left;">${h.tarih}</td>
+              <td>${fmtMoneyPlain(h.fiyat, p.currency)}</td>
+              <td class="row-actions"><button class="btn btn-sm btn-danger" data-tarih="${h.tarih}">Sil</button></td>
+            </tr>`).join("") : `<tr class="empty-row"><td colspan="3">Henüz geçmiş kaydı yok.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+    <div class="drawer-actions"><button class="btn" id="btnCloseHist">Kapat</button></div>
+  `;
+
+  drawer.querySelector("#btnAddHist").onclick = () => {
+    const tarih = drawer.querySelector("#histTarih").value;
+    const fiyat = Number(drawer.querySelector("#histFiyat").value);
+    if(!tarih || !fiyat){ alert("Tarih ve fiyat girin."); return; }
+    addHistoryEntry(key, row.kod, tarih, fiyat);
+    saveState();
+    renderMain();
+  };
+  drawer.querySelector("#btnTodayHist").onclick = () => {
+    const today = new Date().toISOString().slice(0,10);
+    addHistoryEntry(key, row.kod, today, row.guncel);
+    saveState();
+    renderMain();
+  };
+  drawer.querySelector("#btnCloseHist").onclick = () => { historyEditor = null; renderMain(); };
+  drawer.querySelectorAll("button[data-tarih]").forEach(btn => {
+    btn.onclick = () => {
+      deleteHistoryEntry(key, row.kod, btn.dataset.tarih);
+      saveState();
+      renderMain();
+    };
+  });
+
+  return drawer;
+}
+
+function addHistoryEntry(key, kod, tarih, fiyat){
+  const history = PORTFOLIOS[key].history;
+  const idx = history.findIndex(h=>h.kod===kod && h.tarih===tarih);
+  if(idx>=0) history[idx].fiyat = fiyat;
+  else history.push({kod, tarih, fiyat});
+}
+function deleteHistoryEntry(key, kod, tarih){
+  PORTFOLIOS[key].history = PORTFOLIOS[key].history.filter(h=>!(h.kod===kod && h.tarih===tarih));
+}
+
 function saveRow(key, id, grid){
   const p = PORTFOLIOS[key];
   const inputs = grid.querySelectorAll("[data-field]");
@@ -566,7 +708,7 @@ function exportCSV(key){
   const headers = ["Kod","Adet","Alış Fiyatı","Alış Tarihi","Güncel Fiyat","Günlük %","Haftalık %","Yıllık %","3 Yıllık %","Maliyet","Güncel Değer","Kar/Zarar","Kar/Zarar %"];
   const lines = [headers.join(";")];
   p.rows.forEach(r => {
-    const c = computed(r);
+    const c = computed(r,key);
     lines.push([r.kod,r.adet,r.alis,r.alisTarihi,r.guncel,
       pctStr(c.gunluk),pctStr(c.haftalik),pctStr(c.yillik),pctStr(c.ucYillik),
       c.maliyet.toFixed(2), c.guncelDeger.toFixed(2), c.karZarar.toFixed(2), pctStr(c.karZararPct)
@@ -692,7 +834,7 @@ function renderChartsSection(key){
 function drawCharts(key){
   const p = PORTFOLIOS[key];
   const labels = p.rows.map(r=>r.kod);
-  const enriched = p.rows.map(r=>({row:r,c:computed(r)}));
+  const enriched = p.rows.map(r=>({row:r,c:computed(r,key)}));
   const palette = ["#d9a441","#4f8fd1","#3fb6a8","#8a6fd6","#e0554f","#7d9c46","#c2703a","#c25a9e"];
 
   const pieBox = document.getElementById(`box-${key}-pie`);
