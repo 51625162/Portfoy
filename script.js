@@ -69,12 +69,44 @@ seedHistory(PORTFOLIOS.fon.history, "MAC", 2.48, 2.46, 2.38, 1.95, 1.20);
 let nextId = {bist:6, abd:6, fon:6};
 let usdTry = 34.50; // kullanıcı güncelleyebilir
 
-const TAB_ORDER = ["bist","abd","fon","overview"];
+const TAB_ORDER = ["bist","abd","fon","overview","macro"];
 let activeTab = "bist";
 let editingId = {bist:null, abd:null, fon:null};
 let searchTerm = {bist:"", abd:"", fon:""};
 let sortState = {bist:{col:null,dir:1}, abd:{col:null,dir:1}, fon:{col:null,dir:1}};
 let historyEditor = null; // {key, rowId} açık olan fiyat geçmişi paneli
+
+/* ---------- Makroekonomik Veriler (bağımsız bölüm) ---------- */
+let macroNextId = 1;
+function mi(isim){ return {id: macroNextId++, isim, incelendi:false, tarih:null}; }
+const MACRO = {
+  categories: [
+    {key:"reel", label:"Reel Göstergeler", items:[
+      mi("Gayri Safi Yurtiçi Hasıla"), mi("İstihdam/İşsizlik Oranları"), mi("Elektrik Tüketimi"),
+      mi("Kapasite Kullanımı"), mi("Sanayi Üretim Endeksi"), mi("Perakende Satışlar/Tüketici Fiyatları"), mi("Tarımsal Üretim"),
+    ]},
+    {key:"mali", label:"Mali Göstergeler", items:[
+      mi("ÜFE/TÜFE/Enflasyon"), mi("Faiz"), mi("Döviz Kurları"), mi("Bütçe Açığı"), mi("Kredilerdeki Değişim"),
+      mi("Borsa Endeksi"), mi("Para Arzı"), mi("Cari İşlemler Açığı"), mi("İç/Dış Borç Stoku"),
+      mi("Turizm Gelirleri"), mi("İthalat/İhracat Rakamları"),
+    ]},
+    {key:"diger", label:"Diğer Göstergeler", items:[
+      mi("Derecelendirme Kuruluş Notu"), mi("IMF ve Dünya Bankası Raporları"),
+      mi("Avrupa Birliği Ekonomik Raporları"), mi("Politik Risk"), mi("Seçim Dönemleri"),
+    ]},
+    {key:"oncu", label:"Öncü Göstergeler", items:[
+      mi("Borsa Endeksleri"), mi("Yeni İşyerlerinin Açılması"), mi("İnşaat Ruhsatları"),
+      mi("Stoklardaki Değişim"), mi("Sanayide İşe Çıkarma Oranları"), mi("Satınalma Performansı"),
+    ]},
+    {key:"destek", label:"Destekleyici Göstergeler", items:[
+      mi("Sanayi Üretim Endeksleri"), mi("Sanayi ve Ticari Satışlar"), mi("Tarım Dışı İstihdam"),
+    ]},
+    {key:"gecikmeli", label:"Gecikmeli Göstergeler", items:[
+      mi("Sanayi ve Ticaret Stokları"), mi("Birim İşgücü Maliyetlerindeki Değişim"),
+      mi("Banka Faiz Oranları Değişimi"), mi("Tüketici Borç/Gelir Oranı"), mi("Ticari ve Sanayi Borçlarındaki Değişim"),
+    ]},
+  ],
+};
 
 /* ============================= KALICI SAKLAMA (localStorage) ============================= */
 const STORAGE_KEY = "portfoyTakipData_v1";
@@ -86,6 +118,8 @@ function buildPayload(){
     nextId,
     rows: { bist:PORTFOLIOS.bist.rows, abd:PORTFOLIOS.abd.rows, fon:PORTFOLIOS.fon.rows },
     history: { bist:PORTFOLIOS.bist.history, abd:PORTFOLIOS.abd.history, fon:PORTFOLIOS.fon.history },
+    macro: MACRO.categories,
+    macroNextId,
   };
 }
 
@@ -99,6 +133,8 @@ function applyPayload(payload){
   if(payload.history){
     ["bist","abd","fon"].forEach(k => { if(Array.isArray(payload.history[k])) PORTFOLIOS[k].history = payload.history[k]; });
   }
+  if(Array.isArray(payload.macro)) MACRO.categories = payload.macro;
+  if(payload.macroNextId) macroNextId = payload.macroNextId;
   return true;
 }
 
@@ -378,15 +414,20 @@ function renderTicker(){
 function renderTabs(){
   const nav = document.getElementById("tabs");
   nav.innerHTML = "";
-  const labels = {bist:"BIST Portföy", abd:"ABD Portföy", fon:"Fon Portföy", overview:"Genel Bakış"};
+  const labels = {bist:"BIST Portföy", abd:"ABD Portföy", fon:"Fon Portföy", overview:"Genel Bakış", macro:"Makroekonomik Veriler"};
   TAB_ORDER.forEach(key => {
     const btn = document.createElement("button");
     btn.textContent = labels[key];
     btn.className = key===activeTab?"active":"";
-    btn.style.setProperty("--accent", key==="overview" ? "#e7ebee" : PORTFOLIOS[key].accent);
+    btn.style.setProperty("--accent", getTabAccent(key));
     btn.onclick = () => { activeTab = key; renderMain(); };
     nav.appendChild(btn);
   });
+}
+function getTabAccent(key){
+  if(key==="overview") return "#e7ebee";
+  if(key==="macro") return "#c2703a";
+  return PORTFOLIOS[key].accent;
 }
 
 /* ============================= MAIN RENDER ============================= */
@@ -395,6 +436,7 @@ function renderMain(){
   const main = document.getElementById("main");
   main.innerHTML = "";
   if(activeTab === "overview"){ main.appendChild(renderOverview()); }
+  else if(activeTab === "macro"){ main.appendChild(renderMacroPanel()); }
   else { main.appendChild(renderPortfolioPanel(activeTab)); }
   renderTicker();
 }
@@ -912,6 +954,126 @@ function renderOverview(){
   });
 
   return panel;
+}
+
+/* ============================= MAKROEKONOMİK VERİLER (bağımsız bölüm) ============================= */
+function macroCounts(){
+  let total=0, done=0;
+  MACRO.categories.forEach(cat => cat.items.forEach(it => { total++; if(it.incelendi) done++; }));
+  return {total, done};
+}
+
+function renderMacroPanel(){
+  const panel = document.createElement("div");
+  panel.className = "panel active";
+  panel.style.setProperty("--accent", "#c2703a");
+
+  const {total, done} = macroCounts();
+  const cards = document.createElement("div");
+  cards.className = "cards";
+  cards.innerHTML = `
+    <div class="card"><div class="label">Toplam Gösterge</div><div class="value">${total}</div></div>
+    <div class="card"><div class="label">İncelenen</div><div class="value pos">${done}</div></div>
+    <div class="card"><div class="label">Bekleyen</div><div class="value">${total-done}</div></div>
+    <div class="card"><div class="label">Tamamlanma</div><div class="value">%${total?Math.round(done/total*100):0}</div></div>
+  `;
+  panel.appendChild(cards);
+
+  const grid = document.createElement("div");
+  grid.className = "macro-grid";
+  MACRO.categories.forEach(cat => {
+    const catDone = cat.items.filter(i=>i.incelendi).length;
+    const card = document.createElement("div");
+    card.className = "macro-card";
+    card.innerHTML = `
+      <div class="macro-card-head">
+        <h4>${cat.label}</h4>
+        <span class="macro-count">${catDone}/${cat.items.length}</span>
+      </div>
+      <ul class="macro-list">
+        ${cat.items.map(it => `
+          <li class="macro-item ${it.incelendi?'done':''}" data-cat="${cat.key}" data-id="${it.id}">
+            <label class="macro-check">
+              <input type="checkbox" ${it.incelendi?'checked':''} data-act="toggle" data-cat="${cat.key}" data-id="${it.id}">
+              <span>${it.isim}</span>
+            </label>
+            <div class="macro-item-right">
+              ${it.incelendi
+                ? `<input type="date" class="macro-date" value="${it.tarih||''}" data-act="date" data-cat="${cat.key}" data-id="${it.id}">`
+                : `<span class="macro-date-empty">—</span>`}
+              <button class="btn btn-sm btn-danger" data-act="del" data-cat="${cat.key}" data-id="${it.id}">✕</button>
+            </div>
+          </li>
+        `).join("")}
+      </ul>
+      <div class="macro-add-row">
+        <input type="text" class="macro-add-input" placeholder="Yeni gösterge adı…" data-cat="${cat.key}">
+        <button class="btn btn-sm btn-accent" data-act="add" data-cat="${cat.key}">+ Ekle</button>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+  panel.appendChild(grid);
+
+  // ---- event wiring ----
+  grid.querySelectorAll('input[data-act="toggle"]').forEach(cb => {
+    cb.addEventListener("change", () => {
+      toggleMacroItem(cb.dataset.cat, Number(cb.dataset.id), cb.checked);
+    });
+  });
+  grid.querySelectorAll('input[data-act="date"]').forEach(inp => {
+    inp.addEventListener("change", () => {
+      setMacroDate(inp.dataset.cat, Number(inp.dataset.id), inp.value);
+    });
+  });
+  grid.querySelectorAll('button[data-act="del"]').forEach(btn => {
+    btn.addEventListener("click", () => {
+      deleteMacroItem(btn.dataset.cat, Number(btn.dataset.id));
+    });
+  });
+  grid.querySelectorAll('button[data-act="add"]').forEach(btn => {
+    btn.addEventListener("click", () => {
+      const cat = btn.dataset.cat;
+      const input = grid.querySelector(`.macro-add-input[data-cat="${cat}"]`);
+      const isim = input.value.trim();
+      if(!isim) return;
+      addMacroItem(cat, isim);
+    });
+  });
+
+  return panel;
+}
+
+function findMacroCat(catKey){ return MACRO.categories.find(c=>c.key===catKey); }
+
+function toggleMacroItem(catKey, id, checked){
+  const cat = findMacroCat(catKey); if(!cat) return;
+  const item = cat.items.find(i=>i.id===id); if(!item) return;
+  item.incelendi = checked;
+  if(checked && !item.tarih) item.tarih = new Date().toISOString().slice(0,10);
+  if(!checked) item.tarih = null;
+  saveState();
+  renderMain();
+}
+function setMacroDate(catKey, id, tarih){
+  const cat = findMacroCat(catKey); if(!cat) return;
+  const item = cat.items.find(i=>i.id===id); if(!item) return;
+  item.tarih = tarih;
+  saveState();
+  renderMain();
+}
+function deleteMacroItem(catKey, id){
+  const cat = findMacroCat(catKey); if(!cat) return;
+  if(!confirm("Bu göstergeyi silmek istediğinize emin misiniz?")) return;
+  cat.items = cat.items.filter(i=>i.id!==id);
+  saveState();
+  renderMain();
+}
+function addMacroItem(catKey, isim){
+  const cat = findMacroCat(catKey); if(!cat) return;
+  cat.items.push({id:macroNextId++, isim, incelendi:false, tarih:null});
+  saveState();
+  renderMain();
 }
 
 /* ============================= INIT ============================= */
