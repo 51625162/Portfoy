@@ -46,7 +46,24 @@ const PORTFOLIOS = {
     ],
     history:[],
   },
+  kripto: {
+    label:"Kripto Portföy", currency:"$", accent:"#e0954f", idLabel:"Kripto Kodu",
+    rows:[
+      {id:1, kod:"BTC", adet:0.25, alis:52000.00, alisTarihi:"2025-02-05", guncel:68500.00},
+      {id:2, kod:"ETH", adet:3.5, alis:2800.00, alisTarihi:"2025-04-12", guncel:3450.00},
+      {id:3, kod:"SOL", adet:40, alis:110.00, alisTarihi:"2025-05-20", guncel:158.00},
+      {id:4, kod:"XRP", adet:2000, alis:0.55, alisTarihi:"2025-03-08", guncel:0.72},
+      {id:5, kod:"BNB", adet:8, alis:410.00, alisTarihi:"2025-06-01", guncel:520.00},
+    ],
+    history:[],
+  },
 };
+
+seedHistory(PORTFOLIOS.kripto.history, "BTC", 68500.00, 67800.00, 65200.00, 42000.00, 18500.00);
+seedHistory(PORTFOLIOS.kripto.history, "ETH", 3450.00, 3400.00, 3200.00, 2200.00, 1200.00);
+seedHistory(PORTFOLIOS.kripto.history, "SOL", 158.00, 155.00, 145.00, 85.00, 22.00);
+seedHistory(PORTFOLIOS.kripto.history, "XRP", 0.72, 0.71, 0.66, 0.48, 0.32);
+seedHistory(PORTFOLIOS.kripto.history, "BNB", 520.00, 515.00, 495.00, 340.00, 210.00);
 
 seedHistory(PORTFOLIOS.bist.history, "ASELS", 68.90, 68.20, 66.10, 45.30, 22.10);
 seedHistory(PORTFOLIOS.bist.history, "THYAO", 298.50, 301.00, 290.00, 260.00, 130.00);
@@ -66,14 +83,14 @@ seedHistory(PORTFOLIOS.fon.history, "GPB", 1.05, 1.04, 1.00, 0.78, 0.48);
 seedHistory(PORTFOLIOS.fon.history, "IPJ", 5.55, 5.50, 5.35, 4.20, 2.60);
 seedHistory(PORTFOLIOS.fon.history, "MAC", 2.48, 2.46, 2.38, 1.95, 1.20);
 
-let nextId = {bist:6, abd:6, fon:6};
+let nextId = {bist:6, abd:6, fon:6, kripto:6};
 let usdTry = 34.50; // kullanıcı güncelleyebilir
 
-const TAB_ORDER = ["bist","abd","fon","overview","macro"];
+const TAB_ORDER = ["bist","abd","fon","kripto","overview","macro"];
 let activeTab = "bist";
-let editingId = {bist:null, abd:null, fon:null};
-let searchTerm = {bist:"", abd:"", fon:""};
-let sortState = {bist:{col:null,dir:1}, abd:{col:null,dir:1}, fon:{col:null,dir:1}};
+let editingId = {bist:null, abd:null, fon:null, kripto:null};
+let searchTerm = {bist:"", abd:"", fon:"", kripto:""};
+let sortState = {bist:{col:null,dir:1}, abd:{col:null,dir:1}, fon:{col:null,dir:1}, kripto:{col:null,dir:1}};
 let historyEditor = null; // {key, rowId} açık olan fiyat geçmişi paneli
 
 /* ---------- Makroekonomik Veriler (bağımsız bölüm) ---------- */
@@ -116,8 +133,8 @@ function buildPayload(){
   return {
     usdTry,
     nextId,
-    rows: { bist:PORTFOLIOS.bist.rows, abd:PORTFOLIOS.abd.rows, fon:PORTFOLIOS.fon.rows },
-    history: { bist:PORTFOLIOS.bist.history, abd:PORTFOLIOS.abd.history, fon:PORTFOLIOS.fon.history },
+    rows: { bist:PORTFOLIOS.bist.rows, abd:PORTFOLIOS.abd.rows, fon:PORTFOLIOS.fon.rows, kripto:PORTFOLIOS.kripto.rows },
+    history: { bist:PORTFOLIOS.bist.history, abd:PORTFOLIOS.abd.history, fon:PORTFOLIOS.fon.history, kripto:PORTFOLIOS.kripto.history },
     macro: MACRO.categories,
     macroNextId,
   };
@@ -128,10 +145,10 @@ function applyPayload(payload){
   if(payload.usdTry) usdTry = payload.usdTry;
   if(payload.nextId) nextId = payload.nextId;
   if(payload.rows){
-    ["bist","abd","fon"].forEach(k => { if(Array.isArray(payload.rows[k])) PORTFOLIOS[k].rows = payload.rows[k]; });
+    ["bist","abd","fon","kripto"].forEach(k => { if(Array.isArray(payload.rows[k])) PORTFOLIOS[k].rows = payload.rows[k]; });
   }
   if(payload.history){
-    ["bist","abd","fon"].forEach(k => { if(Array.isArray(payload.history[k])) PORTFOLIOS[k].history = payload.history[k]; });
+    ["bist","abd","fon","kripto"].forEach(k => { if(Array.isArray(payload.history[k])) PORTFOLIOS[k].history = payload.history[k]; });
   }
   if(Array.isArray(payload.macro)) MACRO.categories = payload.macro;
   if(payload.macroNextId) macroNextId = payload.macroNextId;
@@ -414,7 +431,7 @@ function renderTicker(){
 function renderTabs(){
   const nav = document.getElementById("tabs");
   nav.innerHTML = "";
-  const labels = {bist:"BIST Portföy", abd:"ABD Portföy", fon:"Fon Portföy", overview:"Genel Bakış", macro:"Makroekonomik Veriler"};
+  const labels = {bist:"BIST Portföy", abd:"ABD Portföy", fon:"Fon Portföy", kripto:"Kripto Portföy", overview:"Genel Bakış", macro:"Makroekonomik Veriler"};
   TAB_ORDER.forEach(key => {
     const btn = document.createElement("button");
     btn.textContent = labels[key];
@@ -473,7 +490,7 @@ function renderPortfolioPanel(key){
   exportBtn.onclick = () => exportCSV(key);
   left.appendChild(search); left.appendChild(exportBtn);
   const addBtn = document.createElement("button");
-  addBtn.className="btn btn-accent"; addBtn.textContent="+ Yeni "+ (key==="fon"?"Fon":"Hisse");
+  addBtn.className="btn btn-accent"; addBtn.textContent="+ Yeni "+ (key==="fon"?"Fon":key==="kripto"?"Kripto":"Hisse");
   addBtn.onclick = () => { editingId[key]="new"; renderMain(); };
   toolbar.appendChild(left); toolbar.appendChild(addBtn);
   panel.appendChild(toolbar);
@@ -910,7 +927,7 @@ function renderOverview(){
 
   const fxRow = document.createElement("div");
   fxRow.className = "fx-row";
-  fxRow.innerHTML = `<label>USD/TRY Kuru</label><input type="number" step="0.01" id="fxInput" value="${usdTry}"> <span style="color:var(--text-soft); font-size:12px;">— ABD portföyünü TL'ye çevirmek için, kendi güncel kurunuzu girin</span>`;
+  fxRow.innerHTML = `<label>USD/TRY Kuru</label><input type="number" step="0.01" id="fxInput" value="${usdTry}"> <span style="color:var(--text-soft); font-size:12px;">— ABD ve Kripto portföylerini TL'ye çevirmek için, kendi güncel kurunuzu girin</span>`;
   panel.appendChild(fxRow);
   requestAnimationFrame(() => {
     document.getElementById("fxInput").addEventListener("input", e => {
@@ -918,10 +935,11 @@ function renderOverview(){
     });
   });
 
-  const bTot = portfolioTotals("bist"), aTot = portfolioTotals("abd"), fTot = portfolioTotals("fon");
+  const bTot = portfolioTotals("bist"), aTot = portfolioTotals("abd"), fTot = portfolioTotals("fon"), kTot = portfolioTotals("kripto");
   const aTotTL = { maliyet:aTot.maliyet*usdTry, guncelDeger:aTot.guncelDeger*usdTry, karZarar:aTot.karZarar*usdTry };
-  const grandMaliyet = bTot.maliyet + aTotTL.maliyet + fTot.maliyet;
-  const grandDeger = bTot.guncelDeger + aTotTL.guncelDeger + fTot.guncelDeger;
+  const kTotTL = { maliyet:kTot.maliyet*usdTry, guncelDeger:kTot.guncelDeger*usdTry, karZarar:kTot.karZarar*usdTry };
+  const grandMaliyet = bTot.maliyet + aTotTL.maliyet + fTot.maliyet + kTotTL.maliyet;
+  const grandDeger = bTot.guncelDeger + aTotTL.guncelDeger + fTot.guncelDeger + kTotTL.guncelDeger;
   const grandKZ = grandDeger - grandMaliyet;
   const grandKZPct = safeDiv(grandKZ, grandMaliyet);
 
@@ -946,10 +964,10 @@ function renderOverview(){
 
   requestAnimationFrame(() => {
     const pieBox = document.getElementById("box-ov-pie");
-    if(pieBox) svgPie(pieBox, ["BIST","ABD","Fon"], [bTot.guncelDeger, aTotTL.guncelDeger, fTot.guncelDeger], ["#d9a441","#4f8fd1","#3fb6a8"]);
+    if(pieBox) svgPie(pieBox, ["BIST","ABD","Fon","Kripto"], [bTot.guncelDeger, aTotTL.guncelDeger, fTot.guncelDeger, kTotTL.guncelDeger], ["#d9a441","#4f8fd1","#3fb6a8","#e0954f"]);
     const plBox = document.getElementById("box-ov-pl");
-    if(plBox) svgBarGrouped(plBox, ["BIST","ABD","Fon"], [
-      {label:"Kar/Zarar (TL)", data:[bTot.karZarar, aTotTL.karZarar, fTot.karZarar], color:v=>v>=0?"#22b573":"#e0554f"}
+    if(plBox) svgBarGrouped(plBox, ["BIST","ABD","Fon","Kripto"], [
+      {label:"Kar/Zarar (TL)", data:[bTot.karZarar, aTotTL.karZarar, fTot.karZarar, kTotTL.karZarar], color:v=>v>=0?"#22b573":"#e0554f"}
     ], {suffix:""});
   });
 
