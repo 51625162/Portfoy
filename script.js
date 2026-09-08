@@ -16,13 +16,15 @@ const PORTFOLIOS = {
   bist: {
     label:"BIST Portföy", currency:"TL", accent:"#d9a441", idLabel:"Hisse Kodu",
     rows:[
-      {id:1, kod:"ASELS", adet:500, alis:62.50, alisTarihi:"2025-03-10", guncel:68.90},
-      {id:2, kod:"THYAO", adet:200, alis:275.00, alisTarihi:"2025-06-02", guncel:298.50},
-      {id:3, kod:"OTOKAR", adet:50, alis:1450.00, alisTarihi:"2024-11-20", guncel:1620.00},
-      {id:4, kod:"LOGO", adet:300, alis:38.20, alisTarihi:"2025-01-15", guncel:41.10},
-      {id:5, kod:"PGSUS", adet:100, alis:410.00, alisTarihi:"2025-05-05", guncel:455.00},
+      {id:1, kod:"ASELS", adet:500, alis:62.50, alisTarihi:"2025-03-10", guncel:68.90, kategori:"ALFA"},
+      {id:2, kod:"THYAO", adet:200, alis:275.00, alisTarihi:"2025-06-02", guncel:298.50, kategori:"DELTA"},
+      {id:3, kod:"OTOKAR", adet:50, alis:1450.00, alisTarihi:"2024-11-20", guncel:1620.00, kategori:"DELTA"},
+      {id:4, kod:"LOGO", adet:300, alis:38.20, alisTarihi:"2025-01-15", guncel:41.10, kategori:"BETA"},
+      {id:5, kod:"PGSUS", adet:100, alis:410.00, alisTarihi:"2025-05-05", guncel:455.00, kategori:"ALFA"},
     ],
     history:[],
+    sold:[],
+    targetWeights: {ALFA:30, BETA:25, DELTA:25, KATILIM:20},
   },
   abd: {
     label:"ABD Portföy", currency:"$", accent:"#4f8fd1", idLabel:"Hisse Kodu",
@@ -34,6 +36,7 @@ const PORTFOLIOS = {
       {id:5, kod:"AMZN", adet:12, alis:145.00, alisTarihi:"2025-03-18", guncel:188.00},
     ],
     history:[],
+    sold:[],
   },
   fon: {
     label:"Fon Portföy", currency:"TL", accent:"#3fb6a8", idLabel:"Fon Kodu",
@@ -45,6 +48,7 @@ const PORTFOLIOS = {
       {id:5, kod:"MAC", adet:1200, alis:2.30, alisTarihi:"2025-03-30", guncel:2.48},
     ],
     history:[],
+    sold:[],
   },
   kripto: {
     label:"Kripto Portföy", currency:"$", accent:"#e0954f", idLabel:"Kripto Kodu",
@@ -56,6 +60,7 @@ const PORTFOLIOS = {
       {id:5, kod:"BNB", adet:8, alis:410.00, alisTarihi:"2025-06-01", guncel:520.00},
     ],
     history:[],
+    sold:[],
   },
 };
 
@@ -84,6 +89,7 @@ seedHistory(PORTFOLIOS.fon.history, "IPJ", 5.55, 5.50, 5.35, 4.20, 2.60);
 seedHistory(PORTFOLIOS.fon.history, "MAC", 2.48, 2.46, 2.38, 1.95, 1.20);
 
 let nextId = {bist:6, abd:6, fon:6, kripto:6};
+let nextSoldId = {bist:1, abd:1, fon:1, kripto:1};
 let usdTry = 34.50; // kullanıcı güncelleyebilir
 
 const TAB_ORDER = ["bist","abd","fon","kripto","overview","macro"];
@@ -92,6 +98,8 @@ let editingId = {bist:null, abd:null, fon:null, kripto:null};
 let searchTerm = {bist:"", abd:"", fon:"", kripto:""};
 let sortState = {bist:{col:null,dir:1}, abd:{col:null,dir:1}, fon:{col:null,dir:1}, kripto:{col:null,dir:1}};
 let historyEditor = null; // {key, rowId} açık olan fiyat geçmişi paneli
+let sellEditor = null; // {key, rowId} açık olan satış paneli
+let categoryFilter = {bist:""};
 
 /* ---------- Makroekonomik Veriler (bağımsız bölüm) ---------- */
 let macroNextId = 1;
@@ -133,8 +141,11 @@ function buildPayload(){
   return {
     usdTry,
     nextId,
+    nextSoldId,
     rows: { bist:PORTFOLIOS.bist.rows, abd:PORTFOLIOS.abd.rows, fon:PORTFOLIOS.fon.rows, kripto:PORTFOLIOS.kripto.rows },
     history: { bist:PORTFOLIOS.bist.history, abd:PORTFOLIOS.abd.history, fon:PORTFOLIOS.fon.history, kripto:PORTFOLIOS.kripto.history },
+    sold: { bist:PORTFOLIOS.bist.sold, abd:PORTFOLIOS.abd.sold, fon:PORTFOLIOS.fon.sold, kripto:PORTFOLIOS.kripto.sold },
+    bistTargetWeights: PORTFOLIOS.bist.targetWeights,
     macro: MACRO.categories,
     macroNextId,
   };
@@ -144,12 +155,17 @@ function applyPayload(payload){
   if(!payload) return false;
   if(payload.usdTry) usdTry = payload.usdTry;
   if(payload.nextId) nextId = payload.nextId;
+  if(payload.nextSoldId) nextSoldId = payload.nextSoldId;
   if(payload.rows){
     ["bist","abd","fon","kripto"].forEach(k => { if(Array.isArray(payload.rows[k])) PORTFOLIOS[k].rows = payload.rows[k]; });
   }
   if(payload.history){
     ["bist","abd","fon","kripto"].forEach(k => { if(Array.isArray(payload.history[k])) PORTFOLIOS[k].history = payload.history[k]; });
   }
+  if(payload.sold){
+    ["bist","abd","fon","kripto"].forEach(k => { if(Array.isArray(payload.sold[k])) PORTFOLIOS[k].sold = payload.sold[k]; });
+  }
+  if(payload.bistTargetWeights) PORTFOLIOS.bist.targetWeights = payload.bistTargetWeights;
   if(Array.isArray(payload.macro)) MACRO.categories = payload.macro;
   if(payload.macroNextId) macroNextId = payload.macroNextId;
   return true;
@@ -477,6 +493,8 @@ function renderPortfolioPanel(key){
   `;
   panel.appendChild(cards);
 
+  if(key==="bist") panel.appendChild(renderWeightSection());
+
   // ---- toolbar ----
   const toolbar = document.createElement("div");
   toolbar.className = "toolbar";
@@ -488,7 +506,25 @@ function renderPortfolioPanel(key){
   const exportBtn = document.createElement("button");
   exportBtn.className="btn"; exportBtn.textContent="⭳ CSV indir";
   exportBtn.onclick = () => exportCSV(key);
-  left.appendChild(search); left.appendChild(exportBtn);
+  const clearHistBtn = document.createElement("button");
+  clearHistBtn.className="btn"; clearHistBtn.textContent="🧹 Fiyat Geçmişini Sıfırla";
+  clearHistBtn.title = "Yanlış/eski görünen değişim yüzdelerini düzeltmek için bu portföydeki TÜM hisselerin fiyat geçmişini temizler";
+  clearHistBtn.onclick = () => {
+    if(!confirm("Bu portföydeki TÜM hisselerin fiyat geçmişi silinecek (Günlük/Haftalık/Yıllık/3 Yıllık % değerleri sıfırlanacak). Silinen/yeniden eklenen hisselerde görülen yanlış yüzdeleri düzeltmek için kullanılır. Emin misiniz?")) return;
+    PORTFOLIOS[key].history = [];
+    saveState();
+    renderMain();
+  };
+  left.appendChild(search); left.appendChild(exportBtn); left.appendChild(clearHistBtn);
+  if(key==="bist"){
+    const catFilter = document.createElement("select");
+    catFilter.className = "search";
+    catFilter.innerHTML = `<option value="">Tüm Kategoriler</option>` +
+      Object.keys(BIST_CATEGORIES).map(k=>`<option value="${k}" ${categoryFilter.bist===k?'selected':''}>${k} · Risk ${BIST_CATEGORIES[k].risk}/10</option>`).join("");
+    catFilter.value = categoryFilter.bist;
+    catFilter.onchange = e => { categoryFilter.bist = e.target.value; renderMain(); };
+    left.appendChild(catFilter);
+  }
   const addBtn = document.createElement("button");
   addBtn.className="btn btn-accent"; addBtn.textContent="+ Yeni "+ (key==="fon"?"Fon":key==="kripto"?"Kripto":"Hisse");
   addBtn.onclick = () => { editingId[key]="new"; renderMain(); };
@@ -501,6 +537,10 @@ function renderPortfolioPanel(key){
   // ---- drawer ----
   if(editingId[key]!==null){ panel.appendChild(renderDrawer(key, editingId[key])); }
   if(historyEditor && historyEditor.key===key){ panel.appendChild(renderHistoryDrawer(key, historyEditor.rowId)); }
+  if(sellEditor && sellEditor.key===key){ panel.appendChild(renderSellDrawer(key, sellEditor.rowId)); }
+
+  // ---- satılanlar (gerçekleşen kar/zarar) ----
+  panel.appendChild(renderSoldSection(key));
 
   // ---- charts ----
   panel.appendChild(renderChartsSection(key));
@@ -508,20 +548,109 @@ function renderPortfolioPanel(key){
   return panel;
 }
 
-const COLS = [
-  {key:"kod", label:"Kod"}, {key:"adet", label:"Adet"}, {key:"alis", label:"Alış Fiy."},
-  {key:"alisTarihi", label:"Alış Tar."}, {key:"guncel", label:"Güncel Fiy."},
-  {key:"gunluk", label:"Günlük %", derived:true}, {key:"haftalik", label:"Haftalık %", derived:true},
-  {key:"yillik", label:"Yıllık %", derived:true}, {key:"ucYillik", label:"3 Yıllık %", derived:true},
-  {key:"maliyet", label:"Maliyet", derived:true}, {key:"guncelDeger", label:"Güncel Değer", derived:true},
-  {key:"karZarar", label:"Kar/Zarar", derived:true}, {key:"karZararPct", label:"Kar/Zarar %", derived:true},
-];
+const BIST_CATEGORIES = {
+  ALFA: {risk:9, aciklama:"Yüksek risk, yüksek potansiyel; Yıldız Pazar/Ana Pazar'daki daha oynak şirketler.", color:"#e0554f"},
+  BETA: {risk:8, aciklama:"Yeni halka arzlar ve büyüme hikâyeleri; fırsat odaklı.", color:"#e0954f"},
+  KATILIM: {risk:4, aciklama:"Katılım endeksi, faizsiz yatırım prensipleri.", color:"#3fb6a8"},
+  DELTA: {risk:5, aciklama:"BIST 100 içindeki köklü, bilanço gücü yüksek şirketler; daha düşük oynaklık hedefi.", color:"#4f8fd1"},
+};
+
+function renderWeightSection(){
+  const p = PORTFOLIOS.bist;
+  const enriched = p.rows.map(r => ({row:r, c: computed(r,"bist")}));
+  const totalDeger = enriched.reduce((s,e)=>s+e.c.guncelDeger, 0);
+
+  const cats = Object.keys(BIST_CATEGORIES);
+  const current = {};
+  cats.forEach(c => current[c] = 0);
+  let kategorisiz = 0;
+  enriched.forEach(e => {
+    const k = e.row.kategori;
+    if(k && current.hasOwnProperty(k)) current[k] += e.c.guncelDeger;
+    else kategorisiz += e.c.guncelDeger;
+  });
+
+  const targetSum = cats.reduce((s,c)=> s + (p.targetWeights[c]||0), 0);
+
+  const wrap = document.createElement("div");
+  wrap.className = "weight-section";
+  wrap.innerHTML = `
+    <div class="section-title" style="margin-top:0;">Kategori Ağırlıkları — Hedef vs Mevcut
+      ${targetSum!==100 ? `<span style="color:var(--red); font-weight:400; font-size:12px; margin-left:8px;">(Hedefler toplamı %${targetSum}, 100 olmalı)</span>` : ""}
+    </div>
+    <div class="weight-grid">
+      ${cats.map(c => {
+        const mevcutPct = totalDeger ? (current[c]/totalDeger*100) : 0;
+        const hedefPct = p.targetWeights[c] || 0;
+        const fark = mevcutPct - hedefPct;
+        const farkClass = Math.abs(fark) <= 3 ? "pos" : Math.abs(fark) <= 7 ? "" : "neg";
+        const cfg = BIST_CATEGORIES[c];
+        return `
+          <div class="weight-row">
+            <div class="weight-label" style="color:${cfg.color};">${c}</div>
+            <div class="weight-target">
+              <label>Hedef</label>
+              <input type="number" class="weight-input" min="0" max="100" step="1" value="${hedefPct}" data-cat="${c}">%
+            </div>
+            <div class="weight-bar-wrap">
+              <div class="weight-bar-track">
+                <div class="weight-bar-target" style="left:${Math.min(hedefPct,100)}%;"></div>
+                <div class="weight-bar-fill" style="width:${Math.min(mevcutPct,100)}%; background:${cfg.color};"></div>
+              </div>
+              <div class="weight-bar-labels"><span>Mevcut: %${mevcutPct.toFixed(1)}</span><span class="${farkClass}">${fark>0?'+':''}${fark.toFixed(1)} puan</span></div>
+            </div>
+          </div>`;
+      }).join("")}
+      ${kategorisiz>0 ? `
+        <div class="weight-row">
+          <div class="weight-label" style="color:var(--text-soft);">Kategorisiz</div>
+          <div class="weight-target"><span style="color:var(--text-soft); font-size:12px;">Hedef yok</span></div>
+          <div class="weight-bar-wrap">
+            <div class="weight-bar-track"><div class="weight-bar-fill" style="width:${totalDeger?Math.min(kategorisiz/totalDeger*100,100):0}%; background:var(--text-soft);"></div></div>
+            <div class="weight-bar-labels"><span>Mevcut: %${totalDeger?(kategorisiz/totalDeger*100).toFixed(1):'0.0'}</span></div>
+          </div>
+        </div>` : ""}
+    </div>
+  `;
+
+  wrap.querySelectorAll(".weight-input").forEach(inp => {
+    inp.addEventListener("change", () => {
+      p.targetWeights[inp.dataset.cat] = Number(inp.value)||0;
+      saveState();
+      renderMain();
+    });
+  });
+
+  return wrap;
+}
+
+function renderKategoriBadge(kategori){
+  if(!kategori || !BIST_CATEGORIES[kategori]) return `<span style="color:var(--text-soft);">—</span>`;
+  const c = BIST_CATEGORIES[kategori];
+  return `<span class="kategori-badge" style="background:${c.color}22; color:${c.color}; border-color:${c.color}55;" title="${c.aciklama} (Risk: ${c.risk}/10)">${kategori} · ${c.risk}/10</span>`;
+}
+
+function getCols(key){
+  const base = [
+    {key:"kod", label:"Kod"}, {key:"adet", label:"Adet"}, {key:"alis", label:"Alış Fiy."},
+    {key:"alisTarihi", label:"Alış Tar."}, {key:"guncel", label:"Güncel Fiy."},
+    {key:"gunluk", label:"Günlük %", derived:true}, {key:"haftalik", label:"Haftalık %", derived:true},
+    {key:"yillik", label:"Yıllık %", derived:true}, {key:"ucYillik", label:"3 Yıllık %", derived:true},
+    {key:"maliyet", label:"Maliyet", derived:true}, {key:"guncelDeger", label:"Güncel Değer", derived:true},
+    {key:"karZarar", label:"Kar/Zarar", derived:true}, {key:"karZararPct", label:"Kar/Zarar %", derived:true},
+  ];
+  if(key==="bist"){
+    base.splice(1, 0, {key:"kategori", label:"Kategori"});
+  }
+  return base;
+}
 
 function renderTable(key){
   const p = PORTFOLIOS[key];
   const wrap = document.createElement("div");
   wrap.className = "table-wrap";
   const table = document.createElement("table");
+  const COLS = getCols(key);
 
   const thead = document.createElement("thead");
   const trh = document.createElement("tr");
@@ -551,6 +680,7 @@ function renderTable(key){
   // filter
   const term = searchTerm[key].toLocaleLowerCase("tr");
   if(term) enriched = enriched.filter(e => e.row.kod.toLocaleLowerCase("tr").includes(term));
+  if(key==="bist" && categoryFilter.bist) enriched = enriched.filter(e => e.row.kategori===categoryFilter.bist);
   // sort
   const {col,dir} = sortState[key];
   if(col){
@@ -572,6 +702,7 @@ function renderTable(key){
       if(row.id===worstId && enriched.length>1 && worstId!==bestId) badge = `<span class="badge badge-worst">En kötü</span>`;
       tr.innerHTML = `
         <td><span class="kod-pill">${row.kod}</span>${badge}</td>
+        ${key==="bist" ? `<td>${renderKategoriBadge(row.kategori)}</td>` : ""}
         <td>${row.adet.toLocaleString("tr-TR")}</td>
         <td>${fmtMoneyPlain(row.alis,p.currency)}</td>
         <td>${row.alisTarihi}</td>
@@ -587,6 +718,7 @@ function renderTable(key){
         <td class="row-actions">
           <button class="btn btn-sm" data-act="hist" data-id="${row.id}">Geçmiş</button>
           <button class="btn btn-sm" data-act="edit" data-id="${row.id}">Düzenle</button>
+          <button class="btn btn-sm btn-accent" data-act="sell" data-id="${row.id}">Sat</button>
           <button class="btn btn-sm btn-danger" data-act="del" data-id="${row.id}">Sil</button>
         </td>`;
       tbody.appendChild(tr);
@@ -601,6 +733,7 @@ function renderTable(key){
       if(btn.dataset.act==="edit"){ editingId[key]=id; renderMain(); }
       if(btn.dataset.act==="del"){ deleteRow(key,id); }
       if(btn.dataset.act==="hist"){ historyEditor = {key, rowId:id}; renderMain(); }
+      if(btn.dataset.act==="sell"){ sellEditor = {key, rowId:id}; renderMain(); }
     });
   });
   return wrap;
@@ -613,13 +746,20 @@ function toggleSort(key,col){
 }
 
 /* ============================= DRAWER ============================= */
-const FORM_FIELDS = [
-  {key:"kod", label:"Kod", type:"text"},
-  {key:"adet", label:"Adet", type:"number"},
-  {key:"alis", label:"Alış Fiyatı", type:"number"},
-  {key:"alisTarihi", label:"Alış Tarihi", type:"date"},
-  {key:"guncel", label:"Güncel Fiyat", type:"number"},
-];
+function getFormFields(key){
+  const base = [
+    {key:"kod", label:"Kod", type:"text"},
+    {key:"adet", label:"Adet", type:"number"},
+    {key:"alis", label:"Alış Fiyatı", type:"number"},
+    {key:"alisTarihi", label:"Alış Tarihi", type:"date"},
+    {key:"guncel", label:"Güncel Fiyat", type:"number"},
+  ];
+  if(key==="bist"){
+    base.push({key:"kategori", label:"Kategori (opsiyonel)", type:"select", optional:true,
+      options:[{value:"", label:"— Seçiniz —"}, ...Object.keys(BIST_CATEGORIES).map(k=>({value:k, label:`${k} · Risk ${BIST_CATEGORIES[k].risk}/10`}))]});
+  }
+  return base;
+}
 
 function renderDrawer(key, id){
   const p = PORTFOLIOS[key];
@@ -632,17 +772,37 @@ function renderDrawer(key, id){
 
   const grid = document.createElement("div");
   grid.className = "field-grid";
-  FORM_FIELDS.forEach(f => {
+  getFormFields(key).forEach(f => {
     const field = document.createElement("div");
     field.className="field";
     const label = document.createElement("label"); label.textContent=f.label;
-    const input = document.createElement("input");
-    input.type = f.type; input.step="any"; input.dataset.field=f.key;
-    input.value = row[f.key] ?? "";
+    let input;
+    if(f.type==="select"){
+      input = document.createElement("select");
+      f.options.forEach(o => {
+        const opt = document.createElement("option");
+        opt.value = o.value; opt.textContent = o.label;
+        if((row[f.key]??"") === o.value) opt.selected = true;
+        input.appendChild(opt);
+      });
+    } else {
+      input = document.createElement("input");
+      input.type = f.type; input.step="any";
+      input.value = row[f.key] ?? "";
+    }
+    input.dataset.field = f.key;
+    if(f.optional) input.dataset.optional = "1";
     field.appendChild(label); field.appendChild(input);
     grid.appendChild(field);
   });
   drawer.appendChild(grid);
+
+  if(key==="bist"){
+    const note = document.createElement("p");
+    note.style.cssText = "font-size:12px; color:var(--text-soft); margin:10px 2px 0;";
+    note.innerHTML = Object.entries(BIST_CATEGORIES).map(([k,c])=>`<b>${k}</b> (${c.risk}/10): ${c.aciklama}`).join("<br>");
+    drawer.appendChild(note);
+  }
 
   const actions = document.createElement("div");
   actions.className="drawer-actions";
@@ -697,7 +857,10 @@ function renderHistoryDrawer(key, rowId){
         </tbody>
       </table>
     </div>
-    <div class="drawer-actions"><button class="btn" id="btnCloseHist">Kapat</button></div>
+    <div class="drawer-actions">
+      <button class="btn" id="btnCloseHist">Kapat</button>
+      <button class="btn btn-danger" id="btnClearHist">Tüm Geçmişi Temizle</button>
+    </div>
   `;
 
   drawer.querySelector("#btnAddHist").onclick = () => {
@@ -715,6 +878,12 @@ function renderHistoryDrawer(key, rowId){
     renderMain();
   };
   drawer.querySelector("#btnCloseHist").onclick = () => { historyEditor = null; renderMain(); };
+  drawer.querySelector("#btnClearHist").onclick = () => {
+    if(!confirm(`${row.kod} için kayıtlı tüm fiyat geçmişi silinecek (yanlış/eski kayıtları temizlemek için). Emin misiniz?`)) return;
+    PORTFOLIOS[key].history = PORTFOLIOS[key].history.filter(h=>h.kod!==row.kod);
+    saveState();
+    renderMain();
+  };
   drawer.querySelectorAll("button[data-tarih]").forEach(btn => {
     btn.onclick = () => {
       deleteHistoryEntry(key, row.kod, btn.dataset.tarih);
@@ -736,6 +905,119 @@ function deleteHistoryEntry(key, kod, tarih){
   PORTFOLIOS[key].history = PORTFOLIOS[key].history.filter(h=>!(h.kod===kod && h.tarih===tarih));
 }
 
+/* ---------- Satış (sat) paneli ---------- */
+function renderSellDrawer(key, rowId){
+  const p = PORTFOLIOS[key];
+  const row = p.rows.find(r=>r.id===rowId);
+  const drawer = document.createElement("div");
+  drawer.className = "drawer open";
+  drawer.style.setProperty("--accent", p.accent);
+
+  if(!row){ drawer.innerHTML = `<h3>Kayıt bulunamadı</h3>`; return drawer; }
+
+  drawer.innerHTML = `
+    <h3>💰 ${row.kod} — Satış</h3>
+    <p style="font-size:12.5px; color:var(--text-soft); margin-top:-6px;">
+      Elinizde ${row.adet.toLocaleString("tr-TR")} adet var. Sattığınız adedi, satış fiyatını ve tarihini girin —
+      gerçekleşen kar/zarar "Satılanlar" tablosunda görünecek.
+    </p>
+    <div class="field-grid">
+      <div class="field"><label>Satılan Adet</label><input type="number" step="any" id="sellAdet" value="${row.adet}" max="${row.adet}"></div>
+      <div class="field"><label>Satış Fiyatı (${p.currency})</label><input type="number" step="any" id="sellFiyat"></div>
+      <div class="field"><label>Satış Tarihi</label><input type="date" id="sellTarih" value="${new Date().toISOString().slice(0,10)}"></div>
+    </div>
+    <div class="drawer-actions">
+      <button class="btn btn-accent" id="btnConfirmSell">Satışı Kaydet</button>
+      <button class="btn" id="btnCancelSell">Vazgeç</button>
+    </div>
+  `;
+
+  drawer.querySelector("#btnConfirmSell").onclick = () => {
+    const adet = Number(drawer.querySelector("#sellAdet").value);
+    const fiyat = Number(drawer.querySelector("#sellFiyat").value);
+    const tarih = drawer.querySelector("#sellTarih").value;
+    if(!adet || adet<=0 || !fiyat || !tarih){ alert("Adet, satış fiyatı ve tarih girin."); return; }
+    if(adet > row.adet){ alert("Satılan adet, elinizdeki adetten fazla olamaz."); return; }
+    sellRow(key, rowId, adet, fiyat, tarih);
+  };
+  drawer.querySelector("#btnCancelSell").onclick = () => { sellEditor = null; renderMain(); };
+
+  return drawer;
+}
+
+function sellRow(key, rowId, adet, fiyat, tarih){
+  const p = PORTFOLIOS[key];
+  const row = p.rows.find(r=>r.id===rowId);
+  if(!row) return;
+  const karZarar = (fiyat - row.alis) * adet;
+  const karZararPct = safeDiv(karZarar, row.alis*adet);
+  p.sold.push({
+    id: nextSoldId[key]++, kod: row.kod, adet, alis: row.alis, alisTarihi: row.alisTarihi,
+    satisFiyati: fiyat, satisTarihi: tarih, karZarar, karZararPct,
+  });
+  if(adet >= row.adet){
+    // tamamı satıldı — pozisyonu kapat
+    p.rows = p.rows.filter(r=>r.id!==rowId);
+    if(!p.rows.some(r=>r.kod===row.kod)){ p.history = p.history.filter(h=>h.kod!==row.kod); }
+  } else {
+    row.adet -= adet;
+  }
+  sellEditor = null;
+  saveState();
+  renderMain();
+}
+
+function deleteSoldRecord(key, id){
+  if(!confirm("Bu satış kaydı silinsin mi?")) return;
+  PORTFOLIOS[key].sold = PORTFOLIOS[key].sold.filter(s=>s.id!==id);
+  saveState();
+  renderMain();
+}
+
+/* ---------- Satılanlar (gerçekleşen kar/zarar) tablosu ---------- */
+function renderSoldSection(key){
+  const p = PORTFOLIOS[key];
+  const wrap = document.createElement("div");
+  if(!p.sold || p.sold.length===0) return wrap; // hiç satış yoksa bölümü hiç gösterme
+
+  const totalRealized = p.sold.reduce((s,r)=>s+r.karZarar, 0);
+  wrap.innerHTML = `<div class="section-title">Satılanlar (Gerçekleşen Kar/Zarar: <span class="${pctClass(totalRealized)}">${fmtMoney(totalRealized,p.currency)}</span>)</div>`;
+
+  const tableWrap = document.createElement("div");
+  tableWrap.className = "table-wrap";
+  const sorted = [...p.sold].sort((a,b)=> b.satisTarihi.localeCompare(a.satisTarihi));
+  tableWrap.innerHTML = `
+    <table>
+      <thead><tr>
+        <th>Kod</th><th>Adet</th><th>Alış Fiy.</th><th>Alış Tar.</th>
+        <th>Satış Fiy.</th><th>Satış Tar.</th><th>Kar/Zarar</th><th>Kar/Zarar %</th><th>İşlem</th>
+      </tr></thead>
+      <tbody>
+        ${sorted.map(s => `
+          <tr>
+            <td style="text-align:left;"><span class="kod-pill">${s.kod}</span></td>
+            <td>${s.adet.toLocaleString("tr-TR")}</td>
+            <td>${fmtMoneyPlain(s.alis,p.currency)}</td>
+            <td>${s.alisTarihi}</td>
+            <td>${fmtMoneyPlain(s.satisFiyati,p.currency)}</td>
+            <td>${s.satisTarihi}</td>
+            <td class="${pctClass(s.karZarar)}">${fmtMoney(s.karZarar,p.currency)}</td>
+            <td class="${pctClass(s.karZararPct)}">${fmtPct(s.karZararPct)}</td>
+            <td class="row-actions"><button class="btn btn-sm btn-danger" data-sold-id="${s.id}">Sil</button></td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+  wrap.appendChild(tableWrap);
+
+  tableWrap.querySelectorAll("button[data-sold-id]").forEach(btn => {
+    btn.addEventListener("click", () => deleteSoldRecord(key, Number(btn.dataset.soldId)));
+  });
+
+  return wrap;
+}
+
 function saveRow(key, id, grid){
   const p = PORTFOLIOS[key];
   const inputs = grid.querySelectorAll("[data-field]");
@@ -743,7 +1025,7 @@ function saveRow(key, id, grid){
   let valid = true;
   inputs.forEach(inp => {
     let val = inp.value;
-    if(!val){ inp.style.borderColor="var(--red)"; valid=false; } else inp.style.borderColor="";
+    if(!val && !inp.dataset.optional){ inp.style.borderColor="var(--red)"; valid=false; } else inp.style.borderColor="";
     if(inp.type==="number") val = Number(val);
     data[inp.dataset.field] = val;
   });
@@ -757,7 +1039,14 @@ function saveRow(key, id, grid){
 
 function deleteRow(key,id){
   if(!confirm("Bu kaydı silmek istediğinize emin misiniz?")) return;
-  PORTFOLIOS[key].rows = PORTFOLIOS[key].rows.filter(r=>r.id!==id);
+  const p = PORTFOLIOS[key];
+  const row = p.rows.find(r=>r.id===id);
+  p.rows = p.rows.filter(r=>r.id!==id);
+  // Bu koda ait başka satır kalmadıysa, o koda ait eski fiyat geçmişini de temizle
+  // (aksi halde silinen hissenin geçmişi, aynı kodla eklenen yeni bir hisseye yanlışlıkla uygulanır)
+  if(row && !p.rows.some(r=>r.kod===row.kod)){
+    p.history = p.history.filter(h=>h.kod!==row.kod);
+  }
   saveState();
   renderMain();
 }
