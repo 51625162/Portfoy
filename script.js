@@ -154,8 +154,8 @@ function buildPayload(){
 function applyPayload(payload){
   if(!payload) return false;
   if(payload.usdTry) usdTry = payload.usdTry;
-  if(payload.nextId) nextId = payload.nextId;
-  if(payload.nextSoldId) nextSoldId = payload.nextSoldId;
+  if(payload.nextId) Object.assign(nextId, payload.nextId);
+  if(payload.nextSoldId) Object.assign(nextSoldId, payload.nextSoldId);
   if(payload.rows){
     ["bist","abd","fon","kripto"].forEach(k => { if(Array.isArray(payload.rows[k])) PORTFOLIOS[k].rows = payload.rows[k]; });
   }
@@ -168,7 +168,24 @@ function applyPayload(payload){
   if(payload.bistTargetWeights) PORTFOLIOS.bist.targetWeights = payload.bistTargetWeights;
   if(Array.isArray(payload.macro)) MACRO.categories = payload.macro;
   if(payload.macroNextId) macroNextId = payload.macroNextId;
+  sanitizeIds();
   return true;
+}
+
+/* Bozuk/eksik ID'leri onarır (ör. eski bir yedekten geçersiz veya çakışan ID gelmişse) */
+function sanitizeIds(){
+  ["bist","abd","fon","kripto"].forEach(k => {
+    const p = PORTFOLIOS[k];
+    let maxId = 0;
+    p.rows.forEach(r => { if(Number.isFinite(r.id)) maxId = Math.max(maxId, r.id); });
+    if(!Number.isFinite(nextId[k]) || nextId[k] <= maxId) nextId[k] = maxId + 1;
+    p.rows.forEach(r => { if(!Number.isFinite(r.id)) r.id = nextId[k]++; });
+
+    let maxSoldId = 0;
+    (p.sold||[]).forEach(s => { if(Number.isFinite(s.id)) maxSoldId = Math.max(maxSoldId, s.id); });
+    if(!Number.isFinite(nextSoldId[k]) || nextSoldId[k] <= maxSoldId) nextSoldId[k] = maxSoldId + 1;
+    (p.sold||[]).forEach(s => { if(!Number.isFinite(s.id)) s.id = nextSoldId[k]++; });
+  });
 }
 
 function saveState(){
