@@ -469,10 +469,19 @@ function getTabAccent(key){
 function renderMain(){
   renderTabs();
   const main = document.getElementById("main");
-  main.innerHTML = "";
-  if(activeTab === "overview"){ main.appendChild(renderOverview()); }
-  else if(activeTab === "macro"){ main.appendChild(renderMacroPanel()); }
-  else { main.appendChild(renderPortfolioPanel(activeTab)); }
+  try{
+    const panel = activeTab === "overview" ? renderOverview()
+      : activeTab === "macro" ? renderMacroPanel()
+      : renderPortfolioPanel(activeTab);
+    main.innerHTML = "";
+    main.appendChild(panel);
+  } catch(err){
+    console.error("Render hatası:", err);
+    main.innerHTML = `<div style="padding:24px; color:var(--red); font-family:'IBM Plex Mono',monospace; font-size:13px;">
+      Bir görüntüleme hatası oluştu: ${err.message}<br><br>
+      <button class="btn" onclick="location.reload()">Sayfayı Yenile</button>
+    </div>`;
+  }
   renderTicker();
 }
 
@@ -802,6 +811,13 @@ function renderDrawer(key, id){
   const drawer = document.createElement("div");
   drawer.className = "drawer open";
   drawer.style.setProperty("--accent", p.accent);
+
+  if(!isNew && !row){
+    drawer.innerHTML = `<h3>Kayıt bulunamadı</h3>`;
+    editingId[key] = null;
+    return drawer;
+  }
+
   drawer.innerHTML = `<h3>${isNew?"Yeni Kayıt":"Kaydı Düzenle"} — ${p.label}</h3>`;
 
   const grid = document.createElement("div");
