@@ -157,7 +157,11 @@ function applyPayload(payload){
   if(payload.nextId) Object.assign(nextId, payload.nextId);
   if(payload.nextSoldId) Object.assign(nextSoldId, payload.nextSoldId);
   if(payload.rows){
-    ["bist","abd","fon","kripto"].forEach(k => { if(Array.isArray(payload.rows[k])) PORTFOLIOS[k].rows = payload.rows[k]; });
+    // Boş/eksik bir eski yedek, uygulamanın örnek portföylerini görünmez hale getirmesin.
+    // Yalnızca gerçekten veri içeren portföy listelerini uygula.
+    ["bist","abd","fon","kripto"].forEach(k => {
+      if(Array.isArray(payload.rows[k]) && payload.rows[k].length > 0) PORTFOLIOS[k].rows = payload.rows[k];
+    });
   }
   if(payload.history){
     ["bist","abd","fon","kripto"].forEach(k => { if(Array.isArray(payload.history[k])) PORTFOLIOS[k].history = payload.history[k]; });
