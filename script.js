@@ -468,13 +468,17 @@ function setUsdTry(value){
 function renderTabs(){
   const nav = document.getElementById("tabs");
   nav.innerHTML = "";
-  const fx = document.createElement("div");
-  fx.style.cssText = "margin:8px 0 14px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;";
+  let fx = document.getElementById("usdTryControl");
+  if(!fx){
+    fx = document.createElement("div");
+    fx.id = "usdTryControl";
+    fx.style.cssText = "margin:8px auto 14px; max-width:1280px; padding:0 28px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;";
+    nav.parentElement.insertBefore(fx, nav);
+  }
   fx.innerHTML = `<span style="font-size:12px;color:var(--text-soft);">USD/TRY Manuel:</span>
     <input id="usdTryInput" type="number" min="0.0001" step="0.01" value="${usdTry.toFixed(2)}" style="width:100px;">
     <button class="btn btn-sm">Güncelle</button>`;
   fx.querySelector("button").onclick = () => setUsdTry(fx.querySelector("input").value);
-  nav.parentElement.insertBefore(fx, nav);
   const labels = {bist:"BIST Portföy", abd:"ABD Portföy", fon:"Fon Portföy", kripto:"Kripto Portföy", sold:"Satılanlar / Ana Bakiye", overview:"Genel Bakış", macro:"Makroekonomik Veriler"};
   TAB_ORDER.forEach(key => {
     const btn = document.createElement("button");
