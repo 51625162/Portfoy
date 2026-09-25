@@ -631,7 +631,7 @@ function renderPortfolioPanel(key){
   `;
   panel.appendChild(cards);
 
-  if(key==="bist"){ panel.appendChild(renderWeightSection()); panel.appendChild(renderBistCategoryPerformance()); }
+  if(key==="bist") panel.appendChild(renderWeightSection());
 
   // ---- toolbar ----
   const toolbar = document.createElement("div");
@@ -775,33 +775,6 @@ function renderWeightSection(){
   });
 
   return wrap;
-}
-
-function renderBistCategoryPerformance(){
-  const section = document.createElement("div");
-  section.className = "category-performance";
-  section.innerHTML = `
-    <div class="section-title">ALFA · BETA · DELTA · KATILIM — Performans Karşılaştırması</div>
-    <div class="chart-card">
-      <h4>Kategori Bazında Kâr/Zarar (%)</h4>
-      <div class="canvas-box" id="box-bist-category-perf"></div>
-    </div>`;
-
-  requestAnimationFrame(() => {
-    const box = document.getElementById("box-bist-category-perf");
-    if(!box) return;
-    const groups = ["ALFA","BETA","DELTA","KATILIM"];
-    const data = groups.map(group => {
-      const rows = PORTFOLIOS.bist.rows.filter(r => r.kategori === group);
-      const maliyet = rows.reduce((sum,r) => sum + (Number(r.adet)||0) * (Number(r.alis)||0), 0);
-      const kar = rows.reduce((sum,r) => sum + ((Number(r.guncel)||0) - (Number(r.alis)||0)) * (Number(r.adet)||0), 0);
-      return maliyet ? +(kar / maliyet * 100).toFixed(2) : 0;
-    });
-    svgBarGrouped(box, groups, [
-      {label:"Kâr/Zarar", data, color:v => v >= 0 ? "#22b573" : "#e0554f"}
-    ], {suffix:"%"});
-  });
-  return section;
 }
 
 function renderKategoriBadge(kategori){
