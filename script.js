@@ -403,13 +403,12 @@ function pctChange(current, past){
 }
 function computed(row, key){
   const history = PORTFOLIOS[key].history || [];
-  const dunku = lookupHistoricalPrice(history, row.kod, 1);
-  const gunluk = pctChange(row.guncel, dunku);
+
   const maliyet = row.adet*row.alis;
   const guncelDeger = row.adet*row.guncel;
   const karZarar = guncelDeger-maliyet;
   const karZararPct = safeDiv(karZarar, maliyet);
-  return {gunluk,maliyet,guncelDeger,karZarar,karZararPct};
+  return {maliyet,guncelDeger,karZarar,karZararPct};
 }
 function safeDiv(a,b){ return b ? a/b : null; }
 
@@ -752,7 +751,6 @@ function getCols(key){
   const base = [
     {key:"kod", label:"Kod"}, {key:"adet", label:"Adet"}, {key:"alis", label:"Alış Fiy."},
     {key:"alisTarihi", label:"Alış Tar."}, {key:"guncel", label:"Güncel Fiy."},
-    {key:"gunluk", label:"Günlük %", derived:true},
     {key:"maliyet", label:"Maliyet", derived:true}, {key:"guncelDeger", label:"Güncel Değer", derived:true},
     {key:"karZarar", label:"Kar/Zarar", derived:true}, {key:"karZararPct", label:"Kar/Zarar %", derived:true},
   ];
@@ -785,15 +783,6 @@ function renderTable(key){
 
   const tbody = document.createElement("tbody");
   let enriched = p.rows.map(r => ({row:r, c: computed(r,key)}));
-  // best/worst by günlük %
-  let bestId=null, worstId=null;
-  if(enriched.length){
-    const withVal = enriched.filter(e=>e.c.gunluk!==null);
-    if(withVal.length){
-      bestId = withVal.reduce((a,b)=>b.c.gunluk>a.c.gunluk?b:a).row.id;
-      worstId = withVal.reduce((a,b)=>b.c.gunluk<a.c.gunluk?b:a).row.id;
-    }
-  }
   // filter
   const term = searchTerm[key].toLocaleLowerCase("tr");
   if(term) enriched = enriched.filter(e => e.row.kod.toLocaleLowerCase("tr").includes(term));
@@ -824,7 +813,6 @@ function renderTable(key){
         <td>${fmtMoneyPlain(row.alis,p.currency)}</td>
         <td>${row.alisTarihi}</td>
         <td>${fmtMoneyPlain(row.guncel,p.currency)}</td>
-        <td class="${pctClass(c.gunluk)}">${fmtPct(c.gunluk)}</td>
         <td>${fmtMoneyPlain(c.maliyet,p.currency)}</td>
         <td>${fmtMoneyPlain(c.guncelDeger,p.currency)}</td>
         <td class="${pctClass(c.karZarar)}">${fmtMoney(c.karZarar,p.currency)}</td>
@@ -1188,12 +1176,11 @@ function deleteRow(key,id){
 /* ============================= CSV EXPORT ============================= */
 function exportCSV(key){
   const p = PORTFOLIOS[key];
-  const headers = ["Kod","Adet","Alış Fiyatı","Alış Tarihi","Güncel Fiyat","Günlük %","Maliyet","Güncel Değer","Kar/Zarar","Kar/Zarar %"];
+  const headers = ["Kod","Adet","Alış Fiyatı","Alış Tarihi","Güncel Fiyat","Maliyet","Güncel Değer","Kar/Zarar","Kar/Zarar %"];
   const lines = [headers.join(";")];
   p.rows.forEach(r => {
     const c = computed(r,key);
     lines.push([r.kod,r.adet,r.alis,r.alisTarihi,r.guncel,
-      pctStr(c.gunluk),
       c.maliyet.toFixed(2), c.guncelDeger.toFixed(2), c.karZarar.toFixed(2), pctStr(c.karZararPct)
     ].join(";"));
   });
@@ -1330,7 +1317,7 @@ function drawCharts(key){
 
   const perfBox = document.getElementById(`box-${key}-perf`);
   if(perfBox) svgBarGrouped(perfBox, labels, [
-    {label:"Günlük", data:enriched.map(e=>pct100(e.c.gunluk)), color:"#d9a441"},
+
   ], {suffix:"%"});
 
   const cvBox = document.getElementById(`box-${key}-cv`);
