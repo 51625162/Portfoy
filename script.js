@@ -1350,9 +1350,22 @@ function drawCharts(key){
   ], {suffix:""});
 
   const perfBox = document.getElementById(`box-${key}-perf`);
-  if(perfBox) svgBarGrouped(perfBox, labels, [
-
-  ], {suffix:"%"});
+  if(perfBox){
+    if(key==="bist"){
+      const groups = ["ALFA","BETA","DELTA","KATILIM"];
+      const data = groups.map(group => {
+        const rows = p.rows.filter(r => r.kategori === group);
+        const maliyet = rows.reduce((sum,r) => sum + (Number(r.adet)||0) * (Number(r.alis)||0), 0);
+        const kar = rows.reduce((sum,r) => sum + ((Number(r.guncel)||0) - (Number(r.alis)||0)) * (Number(r.adet)||0), 0);
+        return maliyet ? +(kar / maliyet * 100).toFixed(2) : 0;
+      });
+      svgBarGrouped(perfBox, groups, [
+        {label:"Kâr/Zarar", data, color:v=>v>=0?"#22b573":"#e0554f"}
+      ], {suffix:"%"});
+    } else {
+      perfBox.innerHTML = `<div class="empty-chart">Kategori performansı yalnızca BIST için gösterilir.</div>`;
+    }
+  }
 
   const cvBox = document.getElementById(`box-${key}-cv`);
   if(cvBox) svgBarGrouped(cvBox, labels, [
