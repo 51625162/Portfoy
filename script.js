@@ -404,20 +404,12 @@ function pctChange(current, past){
 function computed(row, key){
   const history = PORTFOLIOS[key].history || [];
   const dunku = lookupHistoricalPrice(history, row.kod, 1);
-  const hafta = lookupHistoricalPrice(history, row.kod, 7);
-  const ay = lookupHistoricalPrice(history, row.kod, 30);
-  const yil = lookupHistoricalPrice(history, row.kod, 365);
-  const ucYil = lookupHistoricalPrice(history, row.kod, 1095);
   const gunluk = pctChange(row.guncel, dunku);
-  const haftalik = pctChange(row.guncel, hafta);
-  const aylik = pctChange(row.guncel, ay);
-  const yillik = pctChange(row.guncel, yil);
-  const ucYillik = pctChange(row.guncel, ucYil);
   const maliyet = row.adet*row.alis;
   const guncelDeger = row.adet*row.guncel;
   const karZarar = guncelDeger-maliyet;
   const karZararPct = safeDiv(karZarar, maliyet);
-  return {gunluk,haftalik,aylik,yillik,ucYillik,maliyet,guncelDeger,karZarar,karZararPct};
+  return {gunluk,maliyet,guncelDeger,karZarar,karZararPct};
 }
 function safeDiv(a,b){ return b ? a/b : null; }
 
@@ -635,7 +627,7 @@ function renderPortfolioPanel(key){
   clearHistBtn.className="btn"; clearHistBtn.textContent="🧹 Fiyat Geçmişini Sıfırla";
   clearHistBtn.title = "Yanlış/eski görünen değişim yüzdelerini düzeltmek için bu portföydeki TÜM hisselerin fiyat geçmişini temizler";
   clearHistBtn.onclick = () => {
-    if(!confirm("Bu portföydeki TÜM hisselerin fiyat geçmişi silinecek (Günlük/Haftalık/Yıllık/3 Yıllık % değerleri sıfırlanacak). Silinen/yeniden eklenen hisselerde görülen yanlış yüzdeleri düzeltmek için kullanılır. Emin misiniz?")) return;
+    if(!confirm("Bu portföydeki TÜM hisselerin fiyat geçmişi silinecek (Günlük % değerleri sıfırlanacak). Silinen/yeniden eklenen hisselerde görülen yanlış yüzdeleri düzeltmek için kullanılır. Emin misiniz?")) return;
     PORTFOLIOS[key].history = [];
     saveState();
     renderMain();
@@ -680,19 +672,6 @@ const BIST_CATEGORIES = {
   DELTA: {risk:5, aciklama:"BIST 100 içindeki köklü, bilanço gücü yüksek şirketler; daha düşük oynaklık hedefi.", color:"#4f8fd1"},
 };
 
-function categoryMonthlyReturns(enriched, cats){
-  const result = {};
-  cats.forEach(c => {
-    const inCat = enriched.filter(e=>e.row.kategori===c);
-    let weightedSum=0, weightUsed=0;
-    inCat.forEach(e => {
-      if(e.c.aylik!==null && e.c.aylik!==undefined){ weightedSum += e.c.aylik*e.c.guncelDeger; weightUsed += e.c.guncelDeger; }
-    });
-    result[c] = weightUsed ? weightedSum/weightUsed : null;
-  });
-  return result;
-}
-
 function renderWeightSection(){
   const p = PORTFOLIOS.bist;
   const enriched = p.rows.map(r => ({row:r, c: computed(r,"bist")}));
@@ -708,7 +687,6 @@ function renderWeightSection(){
     else kategorisiz += e.c.guncelDeger;
   });
 
-  const monthlyReturns = categoryMonthlyReturns(enriched, cats);
   const targetSum = cats.reduce((s,c)=> s + (p.targetWeights[c]||0), 0);
 
   const wrap = document.createElement("div");
@@ -724,12 +702,10 @@ function renderWeightSection(){
         const fark = mevcutPct - hedefPct;
         const farkClass = Math.abs(fark) <= 3 ? "pos" : Math.abs(fark) <= 7 ? "" : "neg";
         const cfg = BIST_CATEGORIES[c];
-        const aylikRet = monthlyReturns[c];
         return `
           <div class="weight-row">
             <div class="weight-label" style="color:${cfg.color};">${c}
-              <div class="weight-monthly ${pctClass(aylikRet)}">Aylık Getiri: ${fmtPct(aylikRet)}</div>
-            </div>
+              </div>
             <div class="weight-target">
               <label>Hedef</label>
               <input type="number" class="weight-input" min="0" max="100" step="1" value="${hedefPct}" data-cat="${c}">%
@@ -753,10 +729,6 @@ function renderWeightSection(){
           </div>
         </div>` : ""}
     </div>
-    <div class="chart-card" style="margin-top:18px;">
-      <h4>Kategori Performans Karşılaştırması (Aylık Getiri %)</h4>
-      <div class="canvas-box" id="box-bist-catperf"></div>
-    </div>
   `;
 
   wrap.querySelectorAll(".weight-input").forEach(inp => {
@@ -765,15 +737,6 @@ function renderWeightSection(){
       saveState();
       renderMain();
     });
-  });
-
-  requestAnimationFrame(() => {
-    const box = document.getElementById("box-bist-catperf");
-    if(box){
-      svgBarGrouped(box, cats, [
-        {label:"Aylık Getiri %", data: cats.map(c=>pct100(monthlyReturns[c])), colors: cats.map(c=>BIST_CATEGORIES[c].color)}
-      ], {suffix:"%"});
-    }
   });
 
   return wrap;
@@ -789,9 +752,7 @@ function getCols(key){
   const base = [
     {key:"kod", label:"Kod"}, {key:"adet", label:"Adet"}, {key:"alis", label:"Alış Fiy."},
     {key:"alisTarihi", label:"Alış Tar."}, {key:"guncel", label:"Güncel Fiy."},
-    {key:"gunluk", label:"Günlük %", derived:true}, {key:"haftalik", label:"Haftalık %", derived:true},
-    {key:"aylik", label:"Aylık %", derived:true},
-    {key:"yillik", label:"Yıllık %", derived:true}, {key:"ucYillik", label:"3 Yıllık %", derived:true},
+    {key:"gunluk", label:"Günlük %", derived:true},
     {key:"maliyet", label:"Maliyet", derived:true}, {key:"guncelDeger", label:"Güncel Değer", derived:true},
     {key:"karZarar", label:"Kar/Zarar", derived:true}, {key:"karZararPct", label:"Kar/Zarar %", derived:true},
   ];
@@ -864,10 +825,6 @@ function renderTable(key){
         <td>${row.alisTarihi}</td>
         <td>${fmtMoneyPlain(row.guncel,p.currency)}</td>
         <td class="${pctClass(c.gunluk)}">${fmtPct(c.gunluk)}</td>
-        <td class="${pctClass(c.haftalik)}">${fmtPct(c.haftalik)}</td>
-        <td class="${pctClass(c.aylik)}">${fmtPct(c.aylik)}</td>
-        <td class="${pctClass(c.yillik)}">${fmtPct(c.yillik)}</td>
-        <td class="${pctClass(c.ucYillik)}">${fmtPct(c.ucYillik)}</td>
         <td>${fmtMoneyPlain(c.maliyet,p.currency)}</td>
         <td>${fmtMoneyPlain(c.guncelDeger,p.currency)}</td>
         <td class="${pctClass(c.karZarar)}">${fmtMoney(c.karZarar,p.currency)}</td>
@@ -999,7 +956,7 @@ function renderHistoryDrawer(key, rowId){
   drawer.innerHTML = `
     <h3>📅 ${row.kod} — Fiyat Geçmişi</h3>
     <p style="font-size:12.5px; color:var(--text-soft); margin-top:-6px;">
-      Günlük/Haftalık/Yıllık/3 Yıllık değişim yüzdeleri, buraya eklediğiniz geçmiş tarihli fiyatlara göre otomatik hesaplanır.
+      Günlük değişim yüzdesi, buraya eklediğiniz geçmiş tarihli fiyatlara göre otomatik hesaplanır.
       Örn. günlük değişim için dünün tarihli bir fiyat kaydı yeterlidir.
     </p>
     <div class="field-grid" style="grid-template-columns:1fr 1fr auto auto;">
@@ -1231,12 +1188,12 @@ function deleteRow(key,id){
 /* ============================= CSV EXPORT ============================= */
 function exportCSV(key){
   const p = PORTFOLIOS[key];
-  const headers = ["Kod","Adet","Alış Fiyatı","Alış Tarihi","Güncel Fiyat","Günlük %","Haftalık %","Aylık %","Yıllık %","3 Yıllık %","Maliyet","Güncel Değer","Kar/Zarar","Kar/Zarar %"];
+  const headers = ["Kod","Adet","Alış Fiyatı","Alış Tarihi","Güncel Fiyat","Günlük %","Maliyet","Güncel Değer","Kar/Zarar","Kar/Zarar %"];
   const lines = [headers.join(";")];
   p.rows.forEach(r => {
     const c = computed(r,key);
     lines.push([r.kod,r.adet,r.alis,r.alisTarihi,r.guncel,
-      pctStr(c.gunluk),pctStr(c.haftalik),pctStr(c.aylik),pctStr(c.yillik),pctStr(c.ucYillik),
+      pctStr(c.gunluk),
       c.maliyet.toFixed(2), c.guncelDeger.toFixed(2), c.karZarar.toFixed(2), pctStr(c.karZararPct)
     ].join(";"));
   });
@@ -1374,10 +1331,6 @@ function drawCharts(key){
   const perfBox = document.getElementById(`box-${key}-perf`);
   if(perfBox) svgBarGrouped(perfBox, labels, [
     {label:"Günlük", data:enriched.map(e=>pct100(e.c.gunluk)), color:"#d9a441"},
-    {label:"Haftalık", data:enriched.map(e=>pct100(e.c.haftalik)), color:"#4f8fd1"},
-    {label:"Aylık", data:enriched.map(e=>pct100(e.c.aylik)), color:"#e0954f"},
-    {label:"Yıllık", data:enriched.map(e=>pct100(e.c.yillik)), color:"#3fb6a8"},
-    {label:"3 Yıllık", data:enriched.map(e=>pct100(e.c.ucYillik)), color:"#8a6fd6"},
   ], {suffix:"%"});
 
   const cvBox = document.getElementById(`box-${key}-cv`);
