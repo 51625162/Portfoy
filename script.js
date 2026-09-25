@@ -804,6 +804,7 @@ function renderTable(key){
     tbody.innerHTML = `<tr class="empty-row"><td colspan="${COLS.length+1}">Kayıt bulunamadı.</td></tr>`;
   } else {
     enriched.forEach(({row,c}) => {
+      const badge = "";
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td><span class="kod-pill">${row.kod}</span>${badge}</td>
