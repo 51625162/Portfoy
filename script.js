@@ -406,8 +406,6 @@ function pctChange(current, past){
   return (current-past)/past;
 }
 function computed(row, key){
-  const history = PORTFOLIOS[key].history || [];
-
   const maliyet = row.adet*row.alis;
   const guncelDeger = row.adet*row.guncel;
   const karZarar = guncelDeger-maliyet;
@@ -449,7 +447,7 @@ function renderTicker(){
   Object.entries(PORTFOLIOS).forEach(([key,p]) => {
     p.rows.forEach(r => {
       const c = computed(r,key);
-      items.push(`<span class="tick-item ${pctClass(c.gunluk)==='pos'?'up':pctClass(c.gunluk)==='neg'?'down':''}"><b>${r.kod}</b>${fmtPct(c.gunluk)}</span>`);
+      items.push(`<span class="tick-item ${pctClass(c.karZararPct)==='pos'?'up':pctClass(c.karZararPct)==='neg'?'down':''}"><b>${r.kod}</b>${fmtPct(c.karZararPct)}</span>`);
     });
   });
   el.innerHTML = items.join("") + items.join(""); // duplicate for seamless loop
@@ -807,9 +805,6 @@ function renderTable(key){
   } else {
     enriched.forEach(({row,c}) => {
       const tr = document.createElement("tr");
-      let badge = "";
-      if(row.id===bestId && enriched.length>1) badge = `<span class="badge badge-best">En iyi</span>`;
-      if(row.id===worstId && enriched.length>1 && worstId!==bestId) badge = `<span class="badge badge-worst">En kötü</span>`;
       tr.innerHTML = `
         <td><span class="kod-pill">${row.kod}</span>${badge}</td>
         ${key==="bist" ? `<td>${renderKategoriBadge(row.kategori)}</td>` : ""}
