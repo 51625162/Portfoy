@@ -92,7 +92,7 @@ let nextId = {bist:6, abd:6, fon:6, kripto:6};
 let nextSoldId = {bist:1, abd:1, fon:1, kripto:1};
 let usdTry = 34.50; // kullanıcı güncelleyebilir
 
-const TAB_ORDER = ["bist","abd","fon","kripto","overview","macro"];
+const TAB_ORDER = ["bist","abd","fon","kripto","sold","overview","macro"];
 let activeTab = "bist";
 let editingId = {bist:null, abd:null, fon:null, kripto:null};
 let searchTerm = {bist:"", abd:"", fon:"", kripto:""};
@@ -466,7 +466,7 @@ function renderTicker(){
 function renderTabs(){
   const nav = document.getElementById("tabs");
   nav.innerHTML = "";
-  const labels = {bist:"BIST Portföy", abd:"ABD Portföy", fon:"Fon Portföy", kripto:"Kripto Portföy", overview:"Genel Bakış", macro:"Makroekonomik Veriler"};
+  const labels = {bist:"BIST Portföy", abd:"ABD Portföy", fon:"Fon Portföy", kripto:"Kripto Portföy", sold:"Satılanlar / Ana Bakiye", overview:"Genel Bakış", macro:"Makroekonomik Veriler"};
   TAB_ORDER.forEach(key => {
     const btn = document.createElement("button");
     btn.textContent = labels[key];
@@ -478,6 +478,7 @@ function renderTabs(){
 }
 function getTabAccent(key){
   if(key==="overview") return "#e7ebee";
+  if(key==="sold") return "#22b573";
   if(key==="macro") return "#c2703a";
   return PORTFOLIOS[key].accent;
 }
@@ -489,6 +490,7 @@ function renderMain(){
   try{
     const panel = activeTab === "overview" ? renderOverview()
       : activeTab === "macro" ? renderMacroPanel()
+      : activeTab === "sold" ? renderSoldBalancePanel()
       : renderPortfolioPanel(activeTab);
     main.innerHTML = "";
     main.appendChild(panel);
@@ -500,6 +502,101 @@ function renderMain(){
     </div>`;
   }
   renderTicker();
+}
+
+/* ============================= SATILANLAR / ANA BAKİYE ============================= */
+function getRealizedSoldRows(){
+  const rows = [];
+  Object.entries(PORTFOLIOS).forEach(([key,p]) => {
+    (p.sold||[]).forEach(s => {
+      const adet = Number(s.adet) || 0;
+      const alis = Number(s.alis) || 0;
+      const satis = Number(s.satisFiyati) || 0;
+      const karZarar = (satis - alis) * adet;
+      const satisTutari = satis * adet;
+      const karZararPct = safeDiv(karZarar, alis * adet);
+      rows.push({key, portfolio:p.label, currency:p.currency, kod:s.kod, adet, alis, satis,
+        satisTutari, karZarar, karZararPct, alisTarihi:s.alisTarihi, satisTarihi:s.satisTarihi});
+    });
+  });
+  return rows.sort((a,b)=>String(b.satisTarihi).localeCompare(String(a.satisTarihi)));
+}
+
+function renderSoldBalancePanel(){
+  const panel = document.createElement("div");
+  panel.className = "panel active";
+  panel.style.setProperty("--accent", "#22b573");
+
+  const soldRows = getRealizedSoldRows();
+  const tlValue = r => (r.currency === "$" ? r.satisTutari * usdTry : r.satisTutari);
+  const tlProfit = r => (r.currency === "$" ? r.karZarar * usdTry : r.karZarar);
+  const anaBakiye = soldRows.reduce((sum,r)=>sum+tlValue(r),0);
+  const toplamKar = soldRows.reduce((sum,r)=>sum+tlProfit(r),0);
+  const toplamSatis = soldRows.length;
+
+  const cards = document.createElement("div");
+  cards.className = "cards";
+  cards.innerHTML = `
+    <div class="card">
+      <div class="label">ANA BAKİYE · Satışlardan Gelen</div>
+      <div class="value pos">${fmtMoneyPlain(anaBakiye,"TL")}</div>
+      <div class="sub">USD satışları USD/TRY ${usdTry.toFixed(2)} ile çevrilir</div>
+    </div>
+    <div class="card">
+      <div class="label">Gerçekleşen Kâr / Zarar</div>
+      <div class="value ${pctClass(toplamKar)}">${fmtMoney(toplamKar,"TL")}</div>
+    </div>
+    <div class="card">
+      <div class="label">Toplam Satış İşlemi</div>
+      <div class="value">${toplamSatis}</div>
+    </div>
+    <div class="card">
+      <div class="label">USD/TRY</div>
+      <div class="value">${usdTry.toFixed(2)}</div>
+      <div class="sub">Ana bakiye hesaplamasında kullanılır</div>
+    </div>
+  `;
+  panel.appendChild(cards);
+
+  const title = document.createElement("div");
+  title.innerHTML = `<div class="section-title">Satılan Varlıklar — Ana Bakiye Hareketleri</div>`;
+  panel.appendChild(title);
+
+  const tableWrap = document.createElement("div");
+  tableWrap.className = "table-wrap";
+  if(!soldRows.length){
+    tableWrap.innerHTML = `<table><tbody><tr class="empty-row"><td>Henüz satılmış bir varlık yok.</td></tr></tbody></table>`;
+  } else {
+    tableWrap.innerHTML = `
+      <table>
+        <thead><tr>
+          <th>Portföy</th><th>Kod</th><th>Adet</th><th>Alış Fiyatı</th><th>Satış Fiyatı</th>
+          <th>Satış Tutarı</th><th>Gerçekleşen Kâr/Zarar</th><th>Kâr/Zarar %</th><th>Satış Tarihi</th>
+        </tr></thead>
+        <tbody>
+          ${soldRows.map(r=>`
+            <tr>
+              <td>${r.portfolio}</td>
+              <td><span class="kod-pill">${r.kod}</span></td>
+              <td>${r.adet.toLocaleString("tr-TR")}</td>
+              <td>${fmtMoneyPlain(r.alis,r.currency)}</td>
+              <td>${fmtMoneyPlain(r.satis,r.currency)}</td>
+              <td>${fmtMoneyPlain(r.satisTutari,r.currency)}</td>
+              <td class="${pctClass(r.karZarar)}">${fmtMoney(r.karZarar,r.currency)}</td>
+              <td class="${pctClass(r.karZararPct)}">${fmtPct(r.karZararPct)}</td>
+              <td>${r.satisTarihi}</td>
+            </tr>`).join("")}
+        </tbody>
+      </table>`;
+  }
+  panel.appendChild(tableWrap);
+
+  const note = document.createElement("p");
+  note.style.cssText = "font-size:12px;color:var(--text-soft);margin-top:14px;";
+  note.textContent = "Ana Bakiye, kaydedilmiş satışların brüt satış tutarlarının toplamıdır. Gerçekleşen Kâr/Zarar bu bakiyeden ayrı gösterilir.";
+  panel.appendChild(note);
+
+  return panel;
 }
 
 /* ============================= PORTFOLIO PANEL ============================= */
