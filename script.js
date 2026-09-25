@@ -1350,9 +1350,17 @@ function renderOverview(){
   const grandKZ = grandDeger - grandMaliyet;
   const grandKZPct = safeDiv(grandKZ, grandMaliyet);
 
+  // Ana bakiye: satılmış varlıklardan gelen brüt satış tutarları.
+  // USD satışları USD/TRY kuru ile TL'ye çevrilir.
+  const soldRows = getRealizedSoldRows();
+  const anaBakiye = soldRows.reduce((sum,r) => {
+    return sum + (r.currency === "$" ? r.satisTutari * usdTry : r.satisTutari);
+  }, 0);
+
   const cards = document.createElement("div");
   cards.className = "cards";
   cards.innerHTML = `
+    <div class="card"><div class="label">ANA BAKİYE</div><div class="value pos">${fmtMoneyPlain(anaBakiye,"TL")}</div><div class="sub">Satılan varlıklardan gelen brüt nakit</div></div>
     <div class="card"><div class="label">Toplam Maliyet (TL eşd.)</div><div class="value">${fmtMoneyPlain(grandMaliyet,"TL")}</div></div>
     <div class="card"><div class="label">Toplam Güncel Değer (TL eşd.)</div><div class="value">${fmtMoneyPlain(grandDeger,"TL")}</div></div>
     <div class="card"><div class="label">Toplam Kar/Zarar</div><div class="value ${pctClass(grandKZ)}">${fmtMoney(grandKZ,"TL")}</div><div class="sub ${pctClass(grandKZPct)}">${fmtPct(grandKZPct)}</div></div>
