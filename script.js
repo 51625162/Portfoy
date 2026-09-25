@@ -1016,6 +1016,8 @@ function sellRow(key, rowId, adet, fiyat, tarih){
   const p = PORTFOLIOS[key];
   const row = p.rows.find(r=>r.id===rowId);
   if(!row) return;
+  // Kripto dahil tüm portföylerde gerçekleşen sonuç aynı birimde (portföy para birimi) hesaplanır.
+  // Kar = (satış fiyatı - alış fiyatı) × satılan adet.
   const karZarar = (fiyat - row.alis) * adet;
   const karZararPct = safeDiv(karZarar, row.alis*adet);
   p.sold.push({
@@ -1047,12 +1049,23 @@ function renderSoldSection(key){
   const wrap = document.createElement("div");
   if(!p.sold || p.sold.length===0) return wrap; // hiç satış yoksa bölümü hiç gösterme
 
-  const totalRealized = p.sold.reduce((s,r)=>s+r.karZarar, 0);
+  // Gerçekleşen kar/zararı satış kaydının alış/satış fiyatlarından yeniden hesapla.
+  // Böylece eski kayıtlarda saklanmış hatalı karZarar değeri ekranda yanlış görünmez.
+  const realized = s => {
+    const adet = Number(s.adet) || 0;
+    const alis = Number(s.alis) || 0;
+    const satis = Number(s.satisFiyati) || 0;
+    const karZarar = (satis - alis) * adet;
+    const karZararPct = safeDiv(karZarar, alis * adet);
+    return { ...s, karZarar, karZararPct };
+  };
+  const realizedRows = p.sold.map(realized);
+  const totalRealized = realizedRows.reduce((sum,s)=>sum+s.karZarar, 0);
   wrap.innerHTML = `<div class="section-title">Satılanlar (Gerçekleşen Kar/Zarar: <span class="${pctClass(totalRealized)}">${fmtMoney(totalRealized,p.currency)}</span>)</div>`;
 
   const tableWrap = document.createElement("div");
   tableWrap.className = "table-wrap";
-  const sorted = [...p.sold].sort((a,b)=> b.satisTarihi.localeCompare(a.satisTarihi));
+  const sorted = realizedRows.sort((a,b)=> b.satisTarihi.localeCompare(a.satisTarihi));
   tableWrap.innerHTML = `
     <table>
       <thead><tr>
