@@ -1374,6 +1374,60 @@ function drawCharts(key){
   ], {suffix:""});
 }
 
+function getPortfolioRiskLevel(){
+  const rows = PORTFOLIOS.bist.rows;
+  const weights = {ALFA:0,BETA:0,DELTA:0,KATILIM:0};
+  let total = 0;
+  rows.forEach(r => {
+    const value = (Number(r.adet)||0) * (Number(r.guncel)||0);
+    total += value;
+    if(weights[r.kategori] !== undefined) weights[r.kategori] += value;
+  });
+  if(!total) return {label:"Veri yok", score:0};
+  const score = (weights.ALFA/total)*9 + (weights.BETA/total)*8 + (weights.DELTA/total)*5 + (weights.KATILIM/total)*4;
+  return {score, label: score >= 7 ? "Yüksek" : score >= 5 ? "Orta" : "Düşük"};
+}
+
+function renderPortfolioSummary(){
+  const wrap = document.createElement("div");
+  wrap.className = "panel active";
+  const b = portfolioTotals("bist");
+  const a = portfolioTotals("abd");
+  const f = portfolioTotals("fon");
+  const k = portfolioTotals("kripto");
+  const aTL = a.guncelDeger * usdTry;
+  const kTL = k.guncelDeger * usdTry;
+  const anaBakiye = getRealizedSoldRows().reduce((sum,r) =>
+    sum + (r.currency === "$" ? r.satisTutari * usdTry : r.satisTutari), 0);
+  const toplamYatirim = b.guncelDeger + aTL + f.guncelDeger + kTL;
+  const toplamVarlik = toplamYatirim + anaBakiye;
+  const risk = getPortfolioRiskLevel();
+
+  wrap.innerHTML = `
+    <div class="section-title">Portföy Özeti</div>
+    <div class="cards">
+      <div class="card"><div class="label">TOPLAM VARLIK</div><div class="value pos">${fmtMoneyPlain(toplamVarlik,"TL")}</div><div class="sub">Yatırımlar + Ana Bakiye</div></div>
+      <div class="card"><div class="label">YATIRIMLAR</div><div class="value">${fmtMoneyPlain(toplamYatirim,"TL")}</div><div class="sub">BIST + ABD + Fon + Kripto</div></div>
+      <div class="card"><div class="label">ANA BAKİYE</div><div class="value">${fmtMoneyPlain(anaBakiye,"TL")}</div><div class="sub">Satışlardan gelen brüt tutar</div></div>
+      <div class="card"><div class="label">BIST RİSK DÜZEYİ</div><div class="value">${risk.label}</div><div class="sub">Tahmini skor: ${risk.score.toFixed(1)}/10</div></div>
+    </div>
+    <div class="section-title" style="margin-top:22px;">Portföy Dağılımı</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Portföy</th><th>Güncel Değer (TL)</th><th>Pay</th><th>Kâr/Zarar</th></tr></thead>
+        <tbody>
+          ${[
+            ["BIST",b.guncelDeger,b.karZarar],
+            ["ABD",aTL,a.karZarar*usdTry],
+            ["Fon",f.guncelDeger,f.karZarar],
+            ["Kripto",kTL,k.karZarar*usdTry]
+          ].map(x=>`<tr><td><span class="kod-pill">${x[0]}</span></td><td>${fmtMoneyPlain(x[1],"TL")}</td><td>%${toplamYatirim ? (x[1]/toplamYatirim*100).toFixed(1) : "0.0"}</td><td class="${pctClass(x[2])}">${fmtMoney(x[2],"TL")}</td></tr>`).join("")}
+        </tbody>
+      </table>
+    </div>`;
+  return wrap;
+}
+
 /* ============================= OVERVIEW ============================= */
 function renderOverview(){
   const panel = document.createElement("div");
@@ -1413,6 +1467,7 @@ function renderOverview(){
     <div class="card"><div class="label">Toplam Kar/Zarar</div><div class="value ${pctClass(grandKZ)}">${fmtMoney(grandKZ,"TL")}</div><div class="sub ${pctClass(grandKZPct)}">${fmtPct(grandKZPct)}</div></div>
   `;
   panel.appendChild(cards);
+  panel.appendChild(renderPortfolioSummary());
 
   const section = document.createElement("div");
   section.innerHTML = `<div class="section-title">Portföyler Arası Dağılım (TL Eşdeğeri)</div>`;
