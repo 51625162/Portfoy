@@ -650,7 +650,21 @@ function renderPortfolioPanel(key){
   panel.appendChild(toolbar);
 
   // ---- table ----
-  panel.appendChild(renderTable(key));
+  if(key==="bist"){
+    const groups = ["ALFA","BETA","DELTA","KATILIM"];
+    groups.forEach(group => {
+      const section = document.createElement("div");
+      section.className = "category-section";
+      section.innerHTML = `<div class="section-title" style="margin-top:18px;">${group}</div>`;
+      const originalRows = PORTFOLIOS.bist.rows;
+      PORTFOLIOS.bist.rows = originalRows.filter(r => r.kategori === group);
+      section.appendChild(renderTable(key));
+      PORTFOLIOS.bist.rows = originalRows;
+      panel.appendChild(section);
+    });
+  } else {
+    panel.appendChild(renderTable(key));
+  }
 
   // ---- drawer ----
   if(editingId[key]!==null){ panel.appendChild(renderDrawer(key, editingId[key])); }
