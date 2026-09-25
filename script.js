@@ -90,7 +90,7 @@ seedHistory(PORTFOLIOS.fon.history, "MAC", 2.48, 2.46, 2.38, 1.95, 1.20);
 
 let nextId = {bist:6, abd:6, fon:6, kripto:6};
 let nextSoldId = {bist:1, abd:1, fon:1, kripto:1};
-let usdTry = 34.50; // kullanıcı güncelleyebilir
+let usdTry = Number(localStorage.getItem("portfoy_usdTry")) || 34.50; // Manuel USD/TRY
 
 const TAB_ORDER = ["bist","abd","fon","kripto","sold","overview","macro"];
 let activeTab = "bist";
@@ -456,9 +456,25 @@ function renderTicker(){
 }
 
 /* ============================= TABS ============================= */
+function setUsdTry(value){
+  const v = Number(String(value).replace(",", "."));
+  if(!Number.isFinite(v) || v <= 0) return;
+  usdTry = v;
+  localStorage.setItem("portfoy_usdTry", String(v));
+  saveState();
+  renderMain();
+}
+
 function renderTabs(){
   const nav = document.getElementById("tabs");
   nav.innerHTML = "";
+  const fx = document.createElement("div");
+  fx.style.cssText = "margin:8px 0 14px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;";
+  fx.innerHTML = `<span style="font-size:12px;color:var(--text-soft);">USD/TRY Manuel:</span>
+    <input id="usdTryInput" type="number" min="0.0001" step="0.01" value="${usdTry.toFixed(2)}" style="width:100px;">
+    <button class="btn btn-sm">Güncelle</button>`;
+  fx.querySelector("button").onclick = () => setUsdTry(fx.querySelector("input").value);
+  nav.parentElement.insertBefore(fx, nav);
   const labels = {bist:"BIST Portföy", abd:"ABD Portföy", fon:"Fon Portföy", kripto:"Kripto Portföy", sold:"Satılanlar / Ana Bakiye", overview:"Genel Bakış", macro:"Makroekonomik Veriler"};
   TAB_ORDER.forEach(key => {
     const btn = document.createElement("button");
