@@ -1459,7 +1459,7 @@ function renderRadarEditor(type){
     <div class="card" style="margin-bottom:16px;"><div class="label">${codePrefix.toUpperCase()} RADAR</div><div class="sub">Hisseleri/fonları kendiniz ekleyip bilgileri manuel düzenleyebilirsiniz.</div></div>
     <div style="margin-bottom:12px;"><button class="btn" id="addRadarRow">+ ${label} Ekle</button></div>
     <div class="table-wrap"><table>
-      <thead><tr><th>${label}</th><th>Alış Fiyatı</th><th>Alış Tarihi</th><th>Satış Fiyatı</th><th>İşlem</th></tr></thead>
+      <thead><tr><th>${label}</th><th>Alış Fiyatı</th><th>Alış Tarihi</th><th>Satış Fiyatı (İsteğe Bağlı)</th><th>İşlem (İsteğe Bağlı)</th></tr></thead>
       <tbody>${body}</tbody>
     </table></div>`;
   wrap.querySelector("#addRadarRow").onclick=()=>{
