@@ -1436,90 +1436,108 @@ function renderPortfolioSummary(){
 function getRadarList(type){
   const key = type==="stock" ? "portfoy_radar_stocks" : "portfoy_radar_funds";
   try{
-    const data = JSON.parse(localStorage.getItem(key) || "[]");
-    return Array.isArray(data) ? data : [];
-  }catch(e){ return []; }
+    const data=JSON.parse(localStorage.getItem(key)||"[]");
+    return Array.isArray(data)?data:[];
+  }catch(e){return [];}
 }
-function setRadarList(type, rows){
-  const key = type==="stock" ? "portfoy_radar_stocks" : "portfoy_radar_funds";
-  try{
-    localStorage.setItem(key, JSON.stringify(rows));
-    return true;
-  }catch(e){
-    console.error("Radar kaydedilemedi:", e);
-    alert("Radar kaydı tarayıcıya kaydedilemedi.");
-    return false;
-  }
+function setRadarList(type,rows){
+  const key=type==="stock"?"portfoy_radar_stocks":"portfoy_radar_funds";
+  localStorage.setItem(key,JSON.stringify(rows));
+}
+function radarComputed(r){
+  const adet=Number(r.adet)||0, alis=Number(r.alis)||0, guncel=Number(r.guncel)||0;
+  const maliyet=adet*alis, guncelDeger=adet*guncel, karZarar=guncelDeger-maliyet;
+  return {maliyet,guncelDeger,karZarar,karZararPct:maliyet?karZarar/maliyet:0};
 }
 function renderRadarEditor(type){
-  const isStock = type==="stock";
-  const label = isStock ? "Hisse" : "Fon";
-  const title = isStock ? "🚀 Patlama Potansiyeli — Hisse Radar" : "🚀 Patlama Potansiyeli — Fon Radar";
-  const rows = getRadarList(type);
-  const wrap = document.createElement("div");
-  wrap.className = "panel active";
+  const isStock=type==="stock";
+  const label=isStock?"Hisse":"Fon";
+  const title=isStock?"🚀 Patlama Potansiyeli — Hisse Radar":"🚀 Patlama Potansiyeli — Fon Radar";
+  const currency=isStock?"TL":"TL";
+  const rows=getRadarList(type);
+  const wrap=document.createElement("div");
+  wrap.className="panel active";
 
-  const body = rows.length ? rows.map((r,i)=>`
-    <tr>
-      <td><input class="input" type="text" value="${r.kod||""}" data-r="kod" data-i="${i}" placeholder="${label} kodu"></td>
-      <td><input class="input" type="number" step="0.0001" value="${r.alis??""}" data-r="alis" data-i="${i}" placeholder="Alış"></td>
-      <td><input class="input" type="date" value="${r.tarih||""}" data-r="tarih" data-i="${i}"></td>
-      <td><input class="input" type="number" step="0.0001" value="${r.satis??""}" data-r="satis" data-i="${i}" placeholder="İsteğe bağlı"></td>
-      <td>
-        <button type="button" class="btn btn-sm btn-accent" data-update="${i}">Güncelle</button>
-        <button type="button" class="btn btn-sm btn-danger" data-del="${i}">Sil</button>
+  const body=rows.length?rows.map((r,i)=>{
+    const c=radarComputed(r);
+    return `<tr>
+      <td><span class="kod-pill">${r.kod||"—"}</span></td>
+      <td>${Number(r.adet||0).toLocaleString("tr-TR")}</td>
+      <td>${fmtMoneyPlain(Number(r.alis)||0,currency)}</td>
+      <td>${r.alisTarihi||"—"}</td>
+      <td>${fmtMoneyPlain(Number(r.guncel)||0,currency)}</td>
+      <td>${fmtMoneyPlain(c.maliyet,currency)}</td>
+      <td>${fmtMoneyPlain(c.guncelDeger,currency)}</td>
+      <td class="${pctClass(c.karZarar)}">${fmtMoney(c.karZarar,currency)}</td>
+      <td class="${pctClass(c.karZararPct)}">${fmtPct(c.karZararPct)}</td>
+      <td class="row-actions">
+        <button class="btn btn-sm" data-ract="edit" data-i="${i}">Düzenle</button>
+        <button class="btn btn-sm btn-danger" data-ract="del" data-i="${i}">Sil</button>
       </td>
-    </tr>`).join("") : `
-    <tr class="empty-row"><td colspan="5">Henüz ${label.toLowerCase()} eklenmedi. “+ ${label} Ekle” ile başlayın.</td></tr>`;
+    </tr>`;
+  }).join(""):`<tr class="empty-row"><td colspan="10">Henüz ${label.toLowerCase()} eklenmedi.</td></tr>`;
 
   wrap.innerHTML=`
     <div class="section-title">${title}</div>
     <div class="card" style="margin-bottom:16px;">
       <div class="label">${label.toUpperCase()} RADAR</div>
-      <div class="sub">Kayıtları tamamen manuel olarak siz ekleyebilir ve düzenleyebilirsiniz.</div>
+      <div class="sub">BIST Portföy ile aynı hesaplama mantığı. Radar kayıtları manuel eklenir.</div>
     </div>
     <div style="margin-bottom:12px;">
       <button type="button" class="btn btn-accent" id="addRadarRow">+ ${label} Ekle</button>
     </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr>
-          <th>${label}</th><th>Alış Fiyatı</th><th>Alış Tarihi</th>
-          <th>Satış Fiyatı (İsteğe Bağlı)</th><th>İşlem</th>
-        </tr></thead>
-        <tbody>${body}</tbody>
-      </table>
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th>Kod</th><th>Adet</th><th>Alış Fiy.</th><th>Alış Tar.</th><th>Güncel Fiy.</th>
+        <th>Maliyet</th><th>Güncel Değer</th><th>Kâr/Zarar</th><th>Kâr/Zarar %</th><th>İşlem</th>
+      </tr></thead>
+      <tbody>${body}</tbody>
+    </table></div>
+    <div class="section-title" style="margin-top:22px;">Grafikler</div>
+    <div class="chart-grid">
+      <div class="chart-card"><h4>Portföy Dağılımı</h4><div class="canvas-box" id="radar-${type}-pie"></div></div>
+      <div class="chart-card"><h4>Kâr/Zarar</h4><div class="canvas-box" id="radar-${type}-pl"></div></div>
     </div>`;
 
-  wrap.querySelector("#addRadarRow").addEventListener("click",(e)=>{
-    e.preventDefault();
-    const next = rows.concat([{kod:"",alis:"",tarih:"",satis:""}]);
-    if(setRadarList(type,next)) renderMain();
+  wrap.querySelector("#addRadarRow").onclick=()=>{
+    const row={id:Date.now()+Math.random(),kod:"",adet:1,alis:"",alisTarihi:"",guncel:""};
+    rows.push(row); setRadarList(type,rows); renderMain();
+  };
+
+  wrap.querySelectorAll("[data-ract]").forEach(btn=>btn.onclick=()=>{
+    const i=Number(btn.dataset.i);
+    if(btn.dataset.ract==="del"){
+      rows.splice(i,1); setRadarList(type,rows); renderMain(); return;
+    }
+    const r=rows[i];
+    const form=document.createElement("div");
+    form.className="drawer open";
+    form.innerHTML=`
+      <div class="drawer-head"><b>${label} Düzenle</b><button class="btn" id="closeRadarEdit">Kapat</button></div>
+      <div class="drawer-body">
+        <label>Kod<input class="input" id="reKod" value="${r.kod||""}"></label>
+        <label>Adet<input class="input" type="number" step="any" id="reAdet" value="${r.adet??""}"></label>
+        <label>Alış Fiyatı<input class="input" type="number" step="any" id="reAlis" value="${r.alis??""}"></label>
+        <label>Alış Tarihi<input class="input" type="date" id="reTarih" value="${r.alisTarihi||""}"></label>
+        <label>Güncel Fiyat<input class="input" type="number" step="any" id="reGuncel" value="${r.guncel??""}"></label>
+        <label>Satış Fiyatı (isteğe bağlı)<input class="input" type="number" step="any" id="reSatis" value="${r.satis??""}"></label>
+        <button class="btn btn-accent" id="saveRadarEdit">Güncelle</button>
+      </div>`;
+    document.body.appendChild(form);
+    form.querySelector("#closeRadarEdit").onclick=()=>form.remove();
+    form.querySelector("#saveRadarEdit").onclick=()=>{
+      rows[i]={...r,kod:form.querySelector("#reKod").value.trim(),adet:form.querySelector("#reAdet").value,alis:form.querySelector("#reAlis").value,alisTarihi:form.querySelector("#reTarih").value,guncel:form.querySelector("#reGuncel").value,satis:form.querySelector("#reSatis").value};
+      setRadarList(type,rows); form.remove(); renderMain();
+    };
   });
 
-  wrap.querySelectorAll("[data-update]").forEach(btn=>{
-    btn.addEventListener("click",(e)=>{
-      e.preventDefault();
-      const i=Number(btn.dataset.update);
-      const tr=btn.closest("tr");
-      if(!tr || !rows[i]) return;
-      rows[i]={
-        kod:tr.querySelector('[data-r="kod"]').value.trim(),
-        alis:tr.querySelector('[data-r="alis"]').value,
-        tarih:tr.querySelector('[data-r="tarih"]').value,
-        satis:tr.querySelector('[data-r="satis"]').value
-      };
-      if(setRadarList(type,rows)) renderMain();
-    });
-  });
-
-  wrap.querySelectorAll("[data-del]").forEach(btn=>{
-    btn.addEventListener("click",(e)=>{
-      e.preventDefault();
-      const i=Number(btn.dataset.del);
-      rows.splice(i,1);
-      if(setRadarList(type,rows)) renderMain();
-    });
+  requestAnimationFrame(()=>{
+    const pie=document.getElementById(`radar-${type}-pie`);
+    const pl=document.getElementById(`radar-${type}-pl`);
+    const vals=rows.map(r=>radarComputed(r).guncelDeger);
+    const labels=rows.map(r=>r.kod||"—");
+    if(pie) svgPie(pie,labels,vals,["#d9a441","#4f8fd1","#3fb6a8","#8a6fd6","#e0554f","#7d9c46"]);
+    if(pl) svgBarGrouped(pl,labels,[{label:"Kâr/Zarar",data:rows.map(r=>radarComputed(r).karZarar),color:v=>v>=0?"#22b573":"#e0554f"}],{suffix:" TL"});
   });
   return wrap;
 }
