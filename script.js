@@ -1432,50 +1432,60 @@ function renderPortfolioSummary(){
   return wrap;
 }
 
-function renderRadarPanel(){
-  const panel = document.createElement("div");
-  panel.className = "panel active";
-  panel.innerHTML = `
-    <div class="section-title">🚀 Patlama Potansiyeli — Hisse Radar</div>
-    <div class="card" style="margin-bottom:16px;">
-      <div class="label">HİSSE RADAR</div>
-      <div class="sub">Kendi radar hisselerinizi alış fiyatı, alış tarihi ve satış fiyatı ile takip edebilirsiniz.</div>
-    </div>
-    <div class="table-wrap"><table>
-      <thead><tr><th>Hisse</th><th>Alış Fiyatı</th><th>Alış Tarihi</th><th>Satış Fiyatı</th><th>Güncelle</th></tr></thead>
-      <tbody><tr>
-        <td><input class="input" placeholder="Hisse kodu" id="radarStockCode"></td>
-        <td><input class="input" type="number" step="0.01" placeholder="Alış fiyatı" id="radarStockBuy"></td>
-        <td><input class="input" type="date" id="radarStockDate"></td>
-        <td><input class="input" type="number" step="0.01" placeholder="Satış fiyatı" id="radarStockSell"></td>
-        <td><button class="btn" onclick="alert('Hisse radar kaydı için alanlar hazır. Kaydetme sistemi bir sonraki adımda eklenebilir.')">Güncelle</button></td>
-      </tr></tbody>
-    </table></div>`;
-  return panel;
+function getRadarList(type){
+  const key = type==="stock" ? "portfoy_radar_stocks" : "portfoy_radar_funds";
+  try { return JSON.parse(localStorage.getItem(key)||"[]"); } catch(e){ return []; }
 }
+function setRadarList(type, rows){
+  localStorage.setItem(type==="stock" ? "portfoy_radar_stocks" : "portfoy_radar_funds", JSON.stringify(rows));
+}
+function renderRadarEditor(type){
+  const isStock=type==="stock";
+  const rows=getRadarList(type);
+  const title=isStock ? "🚀 Patlama Potansiyeli — Hisse Radar" : "🚀 Patlama Potansiyeli — Fon Radar";
+  const label=isStock ? "Hisse" : "Fon";
+  const codePrefix=isStock ? "Hisse" : "Fon";
+  const wrap=document.createElement("div");
+  wrap.className="panel active";
+  const body=rows.length ? rows.map((r,i)=>`
+    <tr>
+      <td><input class="input" value="${r.kod||""}" data-r="kod" data-i="${i}" placeholder="${label} kodu"></td>
+      <td><input class="input" type="number" step="0.0001" value="${r.alis??""}" data-r="alis" data-i="${i}"></td>
+      <td><input class="input" type="date" value="${r.tarih||""}" data-r="tarih" data-i="${i}"></td>
+      <td><input class="input" type="number" step="0.0001" value="${r.satis??""}" data-r="satis" data-i="${i}"></td>
+      <td><button class="btn" data-save="${i}">Kaydet</button> <button class="btn" data-del="${i}">Sil</button></td>
+    </tr>`).join("") : `<tr><td colspan="5" class="empty-chart">Henüz ${label.toLowerCase()} eklenmedi.</td></tr>`;
+  wrap.innerHTML=`
+    <div class="section-title">${title}</div>
+    <div class="card" style="margin-bottom:16px;"><div class="label">${codePrefix.toUpperCase()} RADAR</div><div class="sub">Hisseleri/fonları kendiniz ekleyip bilgileri manuel düzenleyebilirsiniz.</div></div>
+    <div style="margin-bottom:12px;"><button class="btn" id="addRadarRow">+ ${label} Ekle</button></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>${label}</th><th>Alış Fiyatı</th><th>Alış Tarihi</th><th>Satış Fiyatı</th><th>İşlem</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table></div>`;
+  wrap.querySelector("#addRadarRow").onclick=()=>{
+    rows.push({kod:"",alis:"",tarih:"",satis:""});
+    setRadarList(type,rows); renderMain();
+  };
+  wrap.querySelectorAll("[data-save]").forEach(btn=>btn.onclick=()=>{
+    const i=Number(btn.dataset.save), tr=btn.closest("tr");
+    rows[i]={
+      kod:tr.querySelector('[data-r="kod"]').value.trim(),
+      alis:tr.querySelector('[data-r="alis"]').value,
+      tarih:tr.querySelector('[data-r="tarih"]').value,
+      satis:tr.querySelector('[data-r="satis"]').value
+    };
+    setRadarList(type,rows); renderMain();
+  });
+  wrap.querySelectorAll("[data-del]").forEach(btn=>btn.onclick=()=>{
+    rows.splice(Number(btn.dataset.del),1); setRadarList(type,rows); renderMain();
+  });
+  return wrap;
+}
+function renderRadarPanel(){ return renderRadarEditor("stock"); }
 
 
-function renderFundRadarPanel(){
-  const panel = document.createElement("div");
-  panel.className = "panel active";
-  panel.innerHTML = `
-    <div class="section-title">🚀 Patlama Potansiyeli — Fon Radar</div>
-    <div class="card" style="margin-bottom:16px;">
-      <div class="label">FON RADAR</div>
-      <div class="sub">Kendi radar fonlarınızı alış fiyatı, alış tarihi ve satış fiyatı ile takip edebilirsiniz.</div>
-    </div>
-    <div class="table-wrap"><table>
-      <thead><tr><th>Fon</th><th>Alış Fiyatı</th><th>Alış Tarihi</th><th>Satış Fiyatı</th><th>Güncelle</th></tr></thead>
-      <tbody><tr>
-        <td><input class="input" placeholder="Fon kodu" id="radarFundCode"></td>
-        <td><input class="input" type="number" step="0.0001" placeholder="Alış fiyatı" id="radarFundBuy"></td>
-        <td><input class="input" type="date" id="radarFundDate"></td>
-        <td><input class="input" type="number" step="0.0001" placeholder="Satış fiyatı" id="radarFundSell"></td>
-        <td><button class="btn" onclick="alert('Fon radar kaydı için alanlar hazır. Kaydetme sistemi bir sonraki adımda eklenebilir.')">Güncelle</button></td>
-      </tr></tbody>
-    </table></div>`;
-  return panel;
-}
+function renderFundRadarPanel(){ return renderRadarEditor("fund"); }
 
 
 function renderOverview(){
