@@ -234,3 +234,43 @@
     .toolbar{flex-direction:column; align-items:stretch;}
     .toolbar-left{flex-direction:column;}
   }
+
+/* ---------- Aydınlık Mod ---------- */
+body.light-mode{
+  --bg:#f5f7fa;
+  --panel:#ffffff;
+  --panel-2:#eef2f7;
+  --line:#d7dde5;
+  --text:#1f2937;
+  --text-soft:#64748b;
+  --green:#168653;
+  --green-soft:rgba(22,134,83,0.12);
+  --red:#c83f3a;
+  --red-soft:rgba(200,63,58,0.12);
+  --amber:#b47b16;
+  --blue:#3978b8;
+  --teal:#258f84;
+  --chart-grid:rgba(31,41,55,0.10);
+  --chart-zero:rgba(31,41,55,0.28);
+  --chart-pie-stroke:#ffffff;
+  background:var(--bg);
+  color:var(--text);
+}
+body.light-mode .ticker-wrap{background:#e9edf2;border-bottom-color:#d7dde5;}
+body.light-mode .ticker-wrap .ticker{color:var(--text);}
+body.light-mode .banner{background:#fff7e6;color:#6b4b0b;border-bottom-color:#ead7a7;}
+body.light-mode nav.tabs{border-bottom-color:var(--line);}
+body.light-mode .brand-mark{color:#fff;}
+body.light-mode .theme-toggle{background:#fff;color:#1f2937;border-color:#cbd5e1;}
+body.light-mode .btn{background:var(--panel-2);color:var(--text);border-color:var(--line);}
+body.light-mode .btn-accent{background:var(--accent,var(--amber));color:#fff;border-color:transparent;}
+body.light-mode .btn-danger{color:var(--red);border-color:var(--red);background:transparent;}
+body.light-mode .kod-pill{background:var(--panel-2);border-color:var(--line);}
+body.light-mode thead th{background:var(--panel-2);color:var(--text-soft);}
+body.light-mode tbody tr:hover{background:#f1f5f9;}
+body.light-mode .weight-section,
+body.light-mode .chart-card,
+body.light-mode .drawer,
+body.light-mode .macro-card{background:var(--panel);border-color:var(--line);}
+body.light-mode .weight-bar-track{background:#e2e8f0;}
+body.light-mode .weight-bar-target{background:var(--text);}
