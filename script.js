@@ -1435,65 +1435,96 @@ function renderPortfolioSummary(){
 
 function getRadarList(type){
   const key = type==="stock" ? "portfoy_radar_stocks" : "portfoy_radar_funds";
-  try { return JSON.parse(localStorage.getItem(key)||"[]"); } catch(e){ return []; }
+  try{
+    const data = JSON.parse(localStorage.getItem(key) || "[]");
+    return Array.isArray(data) ? data : [];
+  }catch(e){ return []; }
 }
 function setRadarList(type, rows){
-  localStorage.setItem(type==="stock" ? "portfoy_radar_stocks" : "portfoy_radar_funds", JSON.stringify(rows));
+  const key = type==="stock" ? "portfoy_radar_stocks" : "portfoy_radar_funds";
+  try{
+    localStorage.setItem(key, JSON.stringify(rows));
+    return true;
+  }catch(e){
+    console.error("Radar kaydedilemedi:", e);
+    alert("Radar kaydı tarayıcıya kaydedilemedi.");
+    return false;
+  }
 }
 function renderRadarEditor(type){
-  const isStock=type==="stock";
-  const rows=getRadarList(type);
-  const title=isStock ? "🚀 Patlama Potansiyeli — Hisse Radar" : "🚀 Patlama Potansiyeli — Fon Radar";
-  const label=isStock ? "Hisse" : "Fon";
-  const codePrefix=isStock ? "Hisse" : "Fon";
-  const wrap=document.createElement("div");
-  wrap.className="panel active";
-  const body=rows.length ? rows.map((r,i)=>`
+  const isStock = type==="stock";
+  const label = isStock ? "Hisse" : "Fon";
+  const title = isStock ? "🚀 Patlama Potansiyeli — Hisse Radar" : "🚀 Patlama Potansiyeli — Fon Radar";
+  const rows = getRadarList(type);
+  const wrap = document.createElement("div");
+  wrap.className = "panel active";
+
+  const body = rows.length ? rows.map((r,i)=>`
     <tr>
-      <td><input class="input" value="${r.kod||""}" data-r="kod" data-i="${i}" placeholder="${label} kodu"></td>
-      <td><input class="input" type="number" step="0.0001" value="${r.alis??""}" data-r="alis" data-i="${i}"></td>
+      <td><input class="input" type="text" value="${r.kod||""}" data-r="kod" data-i="${i}" placeholder="${label} kodu"></td>
+      <td><input class="input" type="number" step="0.0001" value="${r.alis??""}" data-r="alis" data-i="${i}" placeholder="Alış"></td>
       <td><input class="input" type="date" value="${r.tarih||""}" data-r="tarih" data-i="${i}"></td>
-      <td><input class="input" type="number" step="0.0001" value="${r.satis??""}" data-r="satis" data-i="${i}"></td>
-      <td><button class="btn" data-save="${i}">Kaydet</button> <button class="btn" data-update="${i}">Güncelle</button> <button class="btn" data-del="${i}">Sil</button></td>
-    </tr>`).join("") : `<tr><td colspan="5" class="empty-chart">Henüz ${label.toLowerCase()} eklenmedi.</td></tr>`;
+      <td><input class="input" type="number" step="0.0001" value="${r.satis??""}" data-r="satis" data-i="${i}" placeholder="İsteğe bağlı"></td>
+      <td>
+        <button type="button" class="btn btn-sm btn-accent" data-update="${i}">Güncelle</button>
+        <button type="button" class="btn btn-sm btn-danger" data-del="${i}">Sil</button>
+      </td>
+    </tr>`).join("") : `
+    <tr class="empty-row"><td colspan="5">Henüz ${label.toLowerCase()} eklenmedi. “+ ${label} Ekle” ile başlayın.</td></tr>`;
+
   wrap.innerHTML=`
     <div class="section-title">${title}</div>
-    <div class="card" style="margin-bottom:16px;"><div class="label">${codePrefix.toUpperCase()} RADAR</div><div class="sub">Hisseleri/fonları kendiniz ekleyip bilgileri manuel düzenleyebilirsiniz.</div></div>
-    <div style="margin-bottom:12px;"><button class="btn" id="addRadarRow">+ ${label} Ekle</button></div>
-    <div class="table-wrap"><table>
-      <thead><tr><th>${label}</th><th>Alış Fiyatı</th><th>Alış Tarihi</th><th>Satış Fiyatı (İsteğe Bağlı)</th><th>İşlem (İsteğe Bağlı)</th></tr></thead>
-      <tbody>${body}</tbody>
-    </table></div>`;
-  wrap.querySelector("#addRadarRow").onclick=()=>{
-    rows.push({kod:"",alis:"",tarih:"",satis:""});
-    setRadarList(type,rows); renderMain();
-  };
-  wrap.querySelectorAll("[data-save]").forEach(btn=>btn.onclick=()=>{
-    const i=Number(btn.dataset.save), tr=btn.closest("tr");
-    rows[i]={
-      kod:tr.querySelector('[data-r="kod"]').value.trim(),
-      alis:tr.querySelector('[data-r="alis"]').value,
-      tarih:tr.querySelector('[data-r="tarih"]').value,
-      satis:tr.querySelector('[data-r="satis"]').value
-    };
-    setRadarList(type,rows); renderMain();
+    <div class="card" style="margin-bottom:16px;">
+      <div class="label">${label.toUpperCase()} RADAR</div>
+      <div class="sub">Kayıtları tamamen manuel olarak siz ekleyebilir ve düzenleyebilirsiniz.</div>
+    </div>
+    <div style="margin-bottom:12px;">
+      <button type="button" class="btn btn-accent" id="addRadarRow">+ ${label} Ekle</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>${label}</th><th>Alış Fiyatı</th><th>Alış Tarihi</th>
+          <th>Satış Fiyatı (İsteğe Bağlı)</th><th>İşlem</th>
+        </tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>`;
+
+  wrap.querySelector("#addRadarRow").addEventListener("click",(e)=>{
+    e.preventDefault();
+    const next = rows.concat([{kod:"",alis:"",tarih:"",satis:""}]);
+    if(setRadarList(type,next)) renderMain();
   });
-  wrap.querySelectorAll("[data-update]").forEach(btn=>btn.onclick=()=>{
-    const i=Number(btn.dataset.update), tr=btn.closest("tr");
-    rows[i]={
-      kod:tr.querySelector('[data-r="kod"]').value.trim(),
-      alis:tr.querySelector('[data-r="alis"]').value,
-      tarih:tr.querySelector('[data-r="tarih"]').value,
-      satis:tr.querySelector('[data-r="satis"]').value
-    };
-    setRadarList(type,rows);
-    renderMain();
+
+  wrap.querySelectorAll("[data-update]").forEach(btn=>{
+    btn.addEventListener("click",(e)=>{
+      e.preventDefault();
+      const i=Number(btn.dataset.update);
+      const tr=btn.closest("tr");
+      if(!tr || !rows[i]) return;
+      rows[i]={
+        kod:tr.querySelector('[data-r="kod"]').value.trim(),
+        alis:tr.querySelector('[data-r="alis"]').value,
+        tarih:tr.querySelector('[data-r="tarih"]').value,
+        satis:tr.querySelector('[data-r="satis"]').value
+      };
+      if(setRadarList(type,rows)) renderMain();
+    });
   });
-  wrap.querySelectorAll("[data-del]").forEach(btn=>btn.onclick=()=>{
-    rows.splice(Number(btn.dataset.del),1); setRadarList(type,rows); renderMain();
+
+  wrap.querySelectorAll("[data-del]").forEach(btn=>{
+    btn.addEventListener("click",(e)=>{
+      e.preventDefault();
+      const i=Number(btn.dataset.del);
+      rows.splice(i,1);
+      if(setRadarList(type,rows)) renderMain();
+    });
   });
   return wrap;
 }
+
+
 function renderRadarPanel(){ return renderRadarEditor("stock"); }
 
 
