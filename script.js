@@ -1452,7 +1452,7 @@ function renderRadarEditor(type){
       <td><input class="input" type="number" step="0.0001" value="${r.alis??""}" data-r="alis" data-i="${i}"></td>
       <td><input class="input" type="date" value="${r.tarih||""}" data-r="tarih" data-i="${i}"></td>
       <td><input class="input" type="number" step="0.0001" value="${r.satis??""}" data-r="satis" data-i="${i}"></td>
-      <td><button class="btn" data-save="${i}">Kaydet</button> <button class="btn" data-del="${i}">Sil</button></td>
+      <td><button class="btn" data-save="${i}">Kaydet</button> <button class="btn" data-update="${i}">Güncelle</button> <button class="btn" data-del="${i}">Sil</button></td>
     </tr>`).join("") : `<tr><td colspan="5" class="empty-chart">Henüz ${label.toLowerCase()} eklenmedi.</td></tr>`;
   wrap.innerHTML=`
     <div class="section-title">${title}</div>
@@ -1475,6 +1475,17 @@ function renderRadarEditor(type){
       satis:tr.querySelector('[data-r="satis"]').value
     };
     setRadarList(type,rows); renderMain();
+  });
+  wrap.querySelectorAll("[data-update]").forEach(btn=>btn.onclick=()=>{
+    const i=Number(btn.dataset.update), tr=btn.closest("tr");
+    rows[i]={
+      kod:tr.querySelector('[data-r="kod"]').value.trim(),
+      alis:tr.querySelector('[data-r="alis"]').value,
+      tarih:tr.querySelector('[data-r="tarih"]').value,
+      satis:tr.querySelector('[data-r="satis"]').value
+    };
+    setRadarList(type,rows);
+    renderMain();
   });
   wrap.querySelectorAll("[data-del]").forEach(btn=>btn.onclick=()=>{
     rows.splice(Number(btn.dataset.del),1); setRadarList(type,rows); renderMain();
