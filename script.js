@@ -1435,79 +1435,37 @@ function renderPortfolioSummary(){
 function renderRadarPanel(){
   const panel = document.createElement("div");
   panel.className = "panel active";
-  panel.style.setProperty("--accent", "#e0954f");
-
-  const rows = PORTFOLIOS.bist.rows.map(r => {
-    const maliyet = (Number(r.adet)||0) * (Number(r.alis)||0);
-    const deger = (Number(r.adet)||0) * (Number(r.guncel)||0);
-    const kz = deger - maliyet;
-    const kzPct = maliyet ? kz/maliyet : 0;
-    return {r,kzPct,deger};
-  });
-
-  // Radar skoru: mevcut uygulamadaki verilerden; kesin fiyat tahmini değildir.
-  const radar = rows.map(x => {
-    const momentum = Math.max(0, Math.min(100, (x.kzPct + 0.10) * 500));
-    const category = x.r.kategori === "ALFA" ? 20 : x.r.kategori === "BETA" ? 16 : x.r.kategori === "DELTA" ? 10 : 8;
-    const score = Math.round(Math.min(100, momentum + category));
-    return {...x, score};
-  }).sort((a,b)=>b.score-a.score);
-
-  const table = radar.length ? `
-    <div class="table-wrap"><table>
-      <thead><tr><th>Hisse</th><th>Kategori</th><th>Kâr/Zarar</th><th>Radar Skoru</th><th>Durum</th></tr></thead>
-      <tbody>
-        ${radar.map(x=>`<tr>
-          <td><span class="kod-pill">${x.r.kod}</span></td>
-          <td>${x.r.kategori||"—"}</td>
-          <td class="${pctClass(x.kzPct)}">${fmtPct(x.kzPct)}</td>
-          <td><b>${x.score}/100</b></td>
-          <td>${x.score>=70?"Güçlü radar":x.score>=45?"İzleme":"Normal"}</td>
-        </tr>`).join("")}
-      </tbody>
-    </table></div>` : `<div class="empty-chart">BIST verisi yok.</div>`;
-
   panel.innerHTML = `
     <div class="section-title">🚀 Patlama Potansiyeli — Hisse Radar</div>
     <div class="card" style="margin-bottom:16px;">
-      <div class="label">RADAR</div>
-      <div class="sub">Skor; mevcut kâr/zarar ve kategori ağırlığına göre hesaplanan bir izleme göstergesidir. Yatırım sonucu veya fiyat tahmini değildir.</div>
+      <div class="label">HİSSE RADAR</div>
+      <div class="sub">Radar listenize kendi hisselerinizi ekleyerek takip edebilirsiniz.</div>
     </div>
-    ${table}`;
+    <div class="table-wrap"><table>
+      <thead><tr><th>Hisse</th><th>Fiyat</th><th>Radar Skoru</th><th>Durum</th></tr></thead>
+      <tbody><tr><td colspan="4" class="empty-chart">Henüz hisse eklenmedi. Hisseleri buraya kendiniz ekleyebilirsiniz.</td></tr></tbody>
+    </table></div>`;
   return panel;
 }
+
+
 function renderFundRadarPanel(){
   const panel = document.createElement("div");
   panel.className = "panel active";
-  const rows = (PORTFOLIOS.fon.rows || []).map(r => {
-    const maliyet=(Number(r.adet)||0)*(Number(r.alis)||0);
-    const deger=(Number(r.adet)||0)*(Number(r.guncel)||0);
-    const kz=deger-maliyet;
-    const kzPct=maliyet?kz/maliyet:0;
-    const momentum=Math.max(0,Math.min(70,(kzPct+0.10)*350));
-    const score=Math.round(Math.min(100,momentum+15));
-    return {...r,kzPct,score};
-  }).sort((a,b)=>b.score-a.score);
-  panel.innerHTML=`
+  panel.innerHTML = `
     <div class="section-title">🚀 Patlama Potansiyeli — Fon Radar</div>
     <div class="card" style="margin-bottom:16px;">
       <div class="label">FON RADAR</div>
-      <div class="sub">Mevcut fon verilerinden oluşturulan izleme göstergesidir; kesin getiri veya fiyat tahmini değildir.</div>
+      <div class="sub">Radar listenize kendi fonlarınızı ekleyerek takip edebilirsiniz.</div>
     </div>
-    ${rows.length ? `<div class="table-wrap"><table>
-      <thead><tr><th>Fon</th><th>Kâr/Zarar</th><th>Radar Skoru</th><th>Durum</th></tr></thead>
-      <tbody>${rows.map(x=>`<tr>
-        <td><span class="kod-pill">${x.kod}</span></td>
-        <td class="${pctClass(x.kzPct)}">${fmtPct(x.kzPct)}</td>
-        <td><b>${x.score}/100</b></td>
-        <td>${x.score>=70?"Güçlü radar":x.score>=45?"İzleme":"Normal"}</td>
-      </tr>`).join("")}</tbody>
-    </table></div>` : '<div class="empty-chart">Fon verisi yok.</div>'}`;
+    <div class="table-wrap"><table>
+      <thead><tr><th>Fon</th><th>Fiyat</th><th>Radar Skoru</th><th>Durum</th></tr></thead>
+      <tbody><tr><td colspan="4" class="empty-chart">Henüz fon eklenmedi. Fonları buraya kendiniz ekleyebilirsiniz.</td></tr></tbody>
+    </table></div>`;
   return panel;
 }
 
 
-/* ============================= OVERVIEW ============================= */
 function renderOverview(){
   const panel = document.createElement("div");
   panel.className = "panel active";
