@@ -855,7 +855,7 @@ function renderTable(key){
         <td>${fmtMoneyPlain(c.maliyet,p.currency)}</td>
         <td>${fmtMoneyPlain(c.guncelDeger,p.currency)}</td>
         <td class="${pctClass(c.karZarar)}">${fmtMoney(c.karZarar,p.currency)}</td>
-        <td class="${pctClass(c.karZararPct)}">${fmtPct(c.karZararPct)}</td>
+        <td class="${c.karZararPct >= 0 ? "pos" : "neg"}" style="font-weight:700;">${c.karZararPct >= 0 ? "+" : ""}${(c.karZararPct*100).toFixed(2)}%</td>
         <td class="row-actions">
           <button class="btn btn-sm" data-act="hist" data-id="${row.id}">Geçmiş</button>
           <button class="btn btn-sm" data-act="edit" data-id="${row.id}">Düzenle</button>
