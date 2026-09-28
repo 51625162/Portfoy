@@ -499,6 +499,8 @@ function getTabAccent(key){
 }
 
 /* ============================= MAIN RENDER ============================= */
+initTheme();
+
 function renderMain(){
   renderTabs();
   const main = document.getElementById("main");
@@ -1684,3 +1686,17 @@ function addMacroItem(catKey, isim){
 loadState();
 renderMain();
 pullFromCloud(true).then(ok => { if(ok) renderMain(); });
+function initTheme(){
+  const light=localStorage.getItem("portfoy_theme")==="light";
+  document.body.classList.toggle("light-mode",light);
+  const btn=document.getElementById("themeToggle");
+  if(btn){
+    btn.textContent=light?"🌙 Koyu Mod":"☀️ Aydınlık Mod";
+    btn.onclick=()=>{
+      const next=!document.body.classList.contains("light-mode");
+      document.body.classList.toggle("light-mode",next);
+      localStorage.setItem("portfoy_theme",next?"light":"dark");
+      btn.textContent=next?"🌙 Koyu Mod":"☀️ Aydınlık Mod";
+    };
+  }
+}
