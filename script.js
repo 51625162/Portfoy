@@ -1683,6 +1683,7 @@ function addMacroItem(catKey, isim){
 }
 
 /* ============================= INIT ============================= */
+initTheme();
 loadState();
 renderMain();
 pullFromCloud(true).then(ok => { if(ok) renderMain(); });
