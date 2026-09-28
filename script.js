@@ -1506,6 +1506,52 @@ function renderRadarEditDrawer(type,index,rows){
   };
 }
 
+function renderRadarAddDrawer(type){
+  const isStock=type==="stock";
+  const label=isStock?"Hisse":"Fon";
+  const drawer=document.createElement("div");
+  drawer.className="drawer open";
+  drawer.style.setProperty("--accent", isStock ? "#d9a441" : "#3fb6a8");
+  drawer.innerHTML=`
+    <div class="drawer-head"><b>+ Yeni ${label} Ekle</b><button type="button" class="btn" id="closeRadarAdd">Kapat</button></div>
+    <div class="drawer-body">
+      <div class="field-grid">
+        <div class="field"><label>Kod</label><input class="input" id="raKod" placeholder="${isStock?"ASELS":"AFT"}" autofocus></div>
+        <div class="field"><label>Adet</label><input class="input" type="number" step="any" id="raAdet" value="1"></div>
+        <div class="field"><label>Alış Fiyatı</label><input class="input" type="number" step="any" id="raAlis"></div>
+        <div class="field"><label>Alış Tarihi</label><input class="input" type="date" id="raTarih"></div>
+        <div class="field"><label>Güncel Fiyat</label><input class="input" type="number" step="any" id="raGuncel"></div>
+      </div>
+      <p style="font-size:12px;color:var(--text-soft);margin:12px 0 0;">Bilgileri elle girin. Kaydettiğinizde maliyet, güncel değer ve kâr/zarar otomatik hesaplanır.</p>
+    </div>
+    <div class="drawer-actions">
+      <button type="button" class="btn btn-accent" id="saveRadarAdd">Kaydet</button>
+      <button type="button" class="btn" id="cancelRadarAdd">Vazgeç</button>
+    </div>`;
+  document.body.appendChild(drawer);
+
+  const close=()=>drawer.remove();
+  drawer.querySelector("#closeRadarAdd").onclick=close;
+  drawer.querySelector("#cancelRadarAdd").onclick=close;
+  drawer.querySelector("#saveRadarAdd").onclick=()=>{
+    const kod=drawer.querySelector("#raKod").value.trim().toUpperCase();
+    const adet=Number(drawer.querySelector("#raAdet").value);
+    const alis=Number(drawer.querySelector("#raAlis").value);
+    const tarih=drawer.querySelector("#raTarih").value;
+    const guncel=Number(drawer.querySelector("#raGuncel").value);
+    if(!kod || !Number.isFinite(adet) || adet<=0 || !Number.isFinite(alis) || alis<0 || !tarih || !Number.isFinite(guncel) || guncel<0){
+      alert("Kod, adet, alış fiyatı, alış tarihi ve güncel fiyatı doğru girin.");
+      return;
+    }
+    const rows=getRadarList(type);
+    rows.push({id:Date.now()+Math.random(),kod,adet,alis,alisTarihi:tarih,guncel});
+    setRadarList(type,rows);
+    close();
+    renderMain();
+  };
+  setTimeout(()=>drawer.querySelector("#raKod")?.focus(),50);
+}
+
 function renderRadarSellDrawer(type,index,rows){
   const isStock=type==="stock";
   const label=isStock?"Hisse":"Fon";
@@ -1629,8 +1675,7 @@ function renderRadarEditor(type){
     </div>`;
 
   wrap.querySelector("#addRadarRow").onclick=()=>{
-    const row={id:Date.now()+Math.random(),kod:"",adet:1,alis:"",alisTarihi:"",guncel:""};
-    rows.push(row); setRadarList(type,rows); renderMain();
+    renderRadarAddDrawer(type);
   };
 
   wrap.querySelectorAll("[data-ract]").forEach(btn=>btn.onclick=()=>{
