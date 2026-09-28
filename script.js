@@ -92,7 +92,7 @@ let nextId = {bist:6, abd:6, fon:6, kripto:6};
 let nextSoldId = {bist:1, abd:1, fon:1, kripto:1};
 let usdTry = Number(localStorage.getItem("portfoy_usdTry")) || 34.50; // Manuel USD/TRY
 
-const TAB_ORDER = ["bist","abd","fon","kripto","sold","overview","radar","fundRadar"];
+const TAB_ORDER = ["bist","abd","fon","kripto","sold","overview","radar","fundRadar","ceiling"];
 let activeTab = "bist";
 let editingId = {bist:null, abd:null, fon:null, kripto:null};
 let searchTerm = {bist:"", abd:"", fon:"", kripto:""};
@@ -479,7 +479,7 @@ function renderTabs(){
     <input id="usdTryInput" type="number" min="0.0001" step="0.01" value="${usdTry.toFixed(2)}" style="width:100px;">
     <button class="btn btn-sm">Güncelle</button>`;
   fx.querySelector("button").onclick = () => setUsdTry(fx.querySelector("input").value);
-  const labels = {bist:"BIST Portföy", abd:"ABD Portföy", fon:"Fon Portföy", kripto:"Kripto Portföy", sold:"Satılanlar / Ana Bakiye", overview:"Genel Bakış", radar:"🚀 Hisse Radar", fundRadar:"🚀 Fon Radar"};
+  const labels = {bist:"BIST Portföy", abd:"ABD Portföy", fon:"Fon Portföy", kripto:"Kripto Portföy", sold:"Satılanlar / Ana Bakiye", overview:"Genel Bakış", radar:"🚀 Hisse Radar", fundRadar:"🚀 Fon Radar", ceiling:"🔥 Tavan Hisseler"};
   TAB_ORDER.forEach(key => {
     const btn = document.createElement("button");
     btn.textContent = labels[key];
@@ -495,6 +495,7 @@ function getTabAccent(key){
   if(key==="macro") return "#c2703a";
   if(key==="radar") return "#e0954f";
   if(key==="fundRadar") return "#8b6fd1";
+  if(key==="ceiling") return "#e0554f";
   return PORTFOLIOS[key].accent;
 }
 
@@ -509,6 +510,7 @@ function renderMain(){
       : activeTab === "sold" ? renderSoldBalancePanel()
       : activeTab === "radar" ? renderRadarPanel()
       : activeTab === "fundRadar" ? renderFundRadarPanel()
+      : activeTab === "ceiling" ? renderCeilingPanel()
       : renderPortfolioPanel(activeTab);
     main.innerHTML = "";
     main.appendChild(panel);
@@ -1434,14 +1436,14 @@ function renderPortfolioSummary(){
 }
 
 function getRadarList(type){
-  const key = type==="stock" ? "portfoy_radar_stocks" : "portfoy_radar_funds";
+  const key = type==="stock" ? "portfoy_radar_stocks" : type==="fund" ? "portfoy_radar_funds" : "portfoy_tavan_stocks";
   try{
     const data=JSON.parse(localStorage.getItem(key)||"[]");
     return Array.isArray(data)?data:[];
   }catch(e){return [];}
 }
 function setRadarList(type,rows){
-  const key=type==="stock"?"portfoy_radar_stocks":"portfoy_radar_funds";
+  const key=type==="stock"?"portfoy_radar_stocks":type==="fund"?"portfoy_radar_funds":"portfoy_tavan_stocks";
   localStorage.setItem(key,JSON.stringify(rows));
 }
 function getRadarSoldList(type){
@@ -1452,7 +1454,7 @@ function getRadarSoldList(type){
   }catch(e){return [];}
 }
 function setRadarSoldList(type,rows){
-  const key=type==="stock"?"portfoy_radar_stock_sold":"portfoy_radar_fund_sold";
+  const key=type==="stock"?"portfoy_radar_stock_sold":type==="fund"?"portfoy_radar_fund_sold":"portfoy_tavan_stock_sold";
   localStorage.setItem(key,JSON.stringify(rows));
 }
 function radarComputed(r){
@@ -1606,9 +1608,9 @@ function renderRadarSellDrawer(type,index,rows){
 }
 
 function renderRadarEditor(type){
-  const isStock=type==="stock";
-  const label=isStock?"Hisse":"Fon";
-  const title=isStock?"🚀 Patlama Potansiyeli — Hisse Radar":"🚀 Patlama Potansiyeli — Fon Radar";
+  const isStock=type==="stock" || type==="ceiling";
+  const label=type==="fund"?"Fon":type==="ceiling"?"Tavan Hisse":"Hisse";
+  const title=type==="stock"?"🚀 Patlama Potansiyeli — Hisse Radar":type==="fund"?"🚀 Patlama Potansiyeli — Fon Radar":"🔥 Tavan Hisseler";
   const rows=getRadarList(type);
   const sold=getRadarSoldList(type);
   const wrap=document.createElement("div");
@@ -1709,6 +1711,7 @@ function renderRadarPanel(){ return renderRadarEditor("stock"); }
 
 
 function renderFundRadarPanel(){ return renderRadarEditor("fund"); }
+function renderCeilingPanel(){ return renderRadarEditor("ceiling"); }
 
 
 function renderOverview(){
