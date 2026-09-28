@@ -1255,7 +1255,7 @@ function svgPie(container, labels, values, colors){
       const x2 = cx + r*Math.cos(endAngle*Math.PI/180);
       const y2 = cy + r*Math.sin(endAngle*Math.PI/180);
       const largeArc = sweep>180?1:0;
-      paths += `<path d="M${cx},${cy} L${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${largeArc} 1 ${x2.toFixed(2)},${y2.toFixed(2)} Z" fill="${color}" stroke="#0a0d10" stroke-width="0.5"><title>${labels[i]}: %${(pct*100).toFixed(1)}</title></path>`;
+      paths += `<path d="M${cx},${cy} L${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${largeArc} 1 ${x2.toFixed(2)},${y2.toFixed(2)} Z" fill="${color}" stroke="var(--chart-pie-stroke)" stroke-width="0.5"><title>${labels[i]}: %${(pct*100).toFixed(1)}</title></path>`;
       angle = endAngle;
     }
     legendItems.push({label:labels[i], pct, color});
@@ -1290,10 +1290,10 @@ function svgBarGrouped(container, labels, datasets, opts={}){
   for(let i=0;i<=steps;i++){
     const v = min + (range*i/steps);
     const y = yForVal(v);
-    svg += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>`;
+    svg += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="var(--chart-grid)" stroke-width="1"/>`;
     svg += `<text x="${padL-6}" y="${(y+3).toFixed(1)}" font-size="9.5" text-anchor="end">${formatAxisVal(v)}${suffix}</text>`;
   }
-  svg += `<line x1="${padL}" y1="${zeroY.toFixed(1)}" x2="${W-padR}" y2="${zeroY.toFixed(1)}" stroke="rgba(255,255,255,0.22)" stroke-width="1"/>`;
+  svg += `<line x1="${padL}" y1="${zeroY.toFixed(1)}" x2="${W-padR}" y2="${zeroY.toFixed(1)}" stroke="var(--chart-zero)" stroke-width="1"/>`;
 
   labels.forEach((label,i) => {
     const groupX = padL + i*groupW;
