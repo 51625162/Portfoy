@@ -1439,11 +1439,17 @@ function renderRadarPanel(){
     <div class="section-title">🚀 Patlama Potansiyeli — Hisse Radar</div>
     <div class="card" style="margin-bottom:16px;">
       <div class="label">HİSSE RADAR</div>
-      <div class="sub">Radar listenize kendi hisselerinizi ekleyerek takip edebilirsiniz.</div>
+      <div class="sub">Kendi radar hisselerinizi alış fiyatı, alış tarihi ve satış fiyatı ile takip edebilirsiniz.</div>
     </div>
     <div class="table-wrap"><table>
-      <thead><tr><th>Hisse</th><th>Fiyat</th><th>Radar Skoru</th><th>Durum</th></tr></thead>
-      <tbody><tr><td colspan="4" class="empty-chart">Henüz hisse eklenmedi. Hisseleri buraya kendiniz ekleyebilirsiniz.</td></tr></tbody>
+      <thead><tr><th>Hisse</th><th>Alış Fiyatı</th><th>Alış Tarihi</th><th>Satış Fiyatı</th><th>Güncelle</th></tr></thead>
+      <tbody><tr>
+        <td><input class="input" placeholder="Hisse kodu" id="radarStockCode"></td>
+        <td><input class="input" type="number" step="0.01" placeholder="Alış fiyatı" id="radarStockBuy"></td>
+        <td><input class="input" type="date" id="radarStockDate"></td>
+        <td><input class="input" type="number" step="0.01" placeholder="Satış fiyatı" id="radarStockSell"></td>
+        <td><button class="btn" onclick="alert('Hisse radar kaydı için alanlar hazır. Kaydetme sistemi bir sonraki adımda eklenebilir.')">Güncelle</button></td>
+      </tr></tbody>
     </table></div>`;
   return panel;
 }
@@ -1456,11 +1462,17 @@ function renderFundRadarPanel(){
     <div class="section-title">🚀 Patlama Potansiyeli — Fon Radar</div>
     <div class="card" style="margin-bottom:16px;">
       <div class="label">FON RADAR</div>
-      <div class="sub">Radar listenize kendi fonlarınızı ekleyerek takip edebilirsiniz.</div>
+      <div class="sub">Kendi radar fonlarınızı alış fiyatı, alış tarihi ve satış fiyatı ile takip edebilirsiniz.</div>
     </div>
     <div class="table-wrap"><table>
-      <thead><tr><th>Fon</th><th>Fiyat</th><th>Radar Skoru</th><th>Durum</th></tr></thead>
-      <tbody><tr><td colspan="4" class="empty-chart">Henüz fon eklenmedi. Fonları buraya kendiniz ekleyebilirsiniz.</td></tr></tbody>
+      <thead><tr><th>Fon</th><th>Alış Fiyatı</th><th>Alış Tarihi</th><th>Satış Fiyatı</th><th>Güncelle</th></tr></thead>
+      <tbody><tr>
+        <td><input class="input" placeholder="Fon kodu" id="radarFundCode"></td>
+        <td><input class="input" type="number" step="0.0001" placeholder="Alış fiyatı" id="radarFundBuy"></td>
+        <td><input class="input" type="date" id="radarFundDate"></td>
+        <td><input class="input" type="number" step="0.0001" placeholder="Satış fiyatı" id="radarFundSell"></td>
+        <td><button class="btn" onclick="alert('Fon radar kaydı için alanlar hazır. Kaydetme sistemi bir sonraki adımda eklenebilir.')">Güncelle</button></td>
+      </tr></tbody>
     </table></div>`;
   return panel;
 }
