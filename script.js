@@ -1464,8 +1464,8 @@ function radarComputed(r){
 }
 
 function renderRadarEditDrawer(type,index,rows){
-  const isStock=type==="stock";
-  const label=isStock?"Hisse":"Fon";
+  const isStock=type==="stock" || type==="ceiling";
+  const label=type==="ceiling"?"Tavan Hisse":isStock?"Hisse":"Fon";
   const r=rows[index];
   if(!r) return;
   const form=document.createElement("div");
@@ -1509,8 +1509,8 @@ function renderRadarEditDrawer(type,index,rows){
 }
 
 function renderRadarAddDrawer(type){
-  const isStock=type==="stock";
-  const label=isStock?"Hisse":"Fon";
+  const isStock=type==="stock" || type==="ceiling";
+  const label=type==="ceiling"?"Tavan Hisse":isStock?"Hisse":"Fon";
   const drawer=document.createElement("div");
   drawer.className="drawer open";
   drawer.style.setProperty("--accent", isStock ? "#d9a441" : "#3fb6a8");
@@ -1555,8 +1555,8 @@ function renderRadarAddDrawer(type){
 }
 
 function renderRadarSellDrawer(type,index,rows){
-  const isStock=type==="stock";
-  const label=isStock?"Hisse":"Fon";
+  const isStock=type==="stock" || type==="ceiling";
+  const label=type==="ceiling"?"Tavan Hisse":isStock?"Hisse":"Fon";
   const currency="TL";
   const row=rows[index];
   if(!row) return;
