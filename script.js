@@ -92,7 +92,7 @@ let nextId = {bist:6, abd:6, fon:6, kripto:6};
 let nextSoldId = {bist:1, abd:1, fon:1, kripto:1};
 let usdTry = Number(localStorage.getItem("portfoy_usdTry")) || 34.50; // Manuel USD/TRY
 
-const TAB_ORDER = ["bist","abd","fon","kripto","sold","overview","radar","macro"];
+const TAB_ORDER = ["bist","abd","fon","kripto","sold","overview","radar","fundRadar","macro"];
 let activeTab = "bist";
 let editingId = {bist:null, abd:null, fon:null, kripto:null};
 let searchTerm = {bist:"", abd:"", fon:"", kripto:""};
@@ -479,7 +479,7 @@ function renderTabs(){
     <input id="usdTryInput" type="number" min="0.0001" step="0.01" value="${usdTry.toFixed(2)}" style="width:100px;">
     <button class="btn btn-sm">Güncelle</button>`;
   fx.querySelector("button").onclick = () => setUsdTry(fx.querySelector("input").value);
-  const labels = {bist:"BIST Portföy", abd:"ABD Portföy", fon:"Fon Portföy", kripto:"Kripto Portföy", sold:"Satılanlar / Ana Bakiye", overview:"Genel Bakış", radar:"🚀 Hisse Radar", macro:"Makroekonomik Veriler"};
+  const labels = {bist:"BIST Portföy", abd:"ABD Portföy", fon:"Fon Portföy", kripto:"Kripto Portföy", sold:"Satılanlar / Ana Bakiye", overview:"Genel Bakış", radar:"🚀 Hisse Radar", fundRadar:"🚀 Fon Radar", macro:"Makroekonomik Veriler"};
   TAB_ORDER.forEach(key => {
     const btn = document.createElement("button");
     btn.textContent = labels[key];
@@ -494,6 +494,7 @@ function getTabAccent(key){
   if(key==="sold") return "#22b573";
   if(key==="macro") return "#c2703a";
   if(key==="radar") return "#e0954f";
+  if(key==="fundRadar") return "#8b6fd1";
   return PORTFOLIOS[key].accent;
 }
 
@@ -506,6 +507,7 @@ function renderMain(){
       : activeTab === "macro" ? renderMacroPanel()
       : activeTab === "sold" ? renderSoldBalancePanel()
       : activeTab === "radar" ? renderRadarPanel()
+      : activeTab === "fundRadar" ? renderFundRadarPanel()
       : renderPortfolioPanel(activeTab);
     main.innerHTML = "";
     main.appendChild(panel);
@@ -1474,6 +1476,36 @@ function renderRadarPanel(){
     ${table}`;
   return panel;
 }
+function renderFundRadarPanel(){
+  const panel = document.createElement("div");
+  panel.className = "panel active";
+  const rows = (PORTFOLIOS.fon.rows || []).map(r => {
+    const maliyet=(Number(r.adet)||0)*(Number(r.alis)||0);
+    const deger=(Number(r.adet)||0)*(Number(r.guncel)||0);
+    const kz=deger-maliyet;
+    const kzPct=maliyet?kz/maliyet:0;
+    const momentum=Math.max(0,Math.min(70,(kzPct+0.10)*350));
+    const score=Math.round(Math.min(100,momentum+15));
+    return {...r,kzPct,score};
+  }).sort((a,b)=>b.score-a.score);
+  panel.innerHTML=`
+    <div class="section-title">🚀 Patlama Potansiyeli — Fon Radar</div>
+    <div class="card" style="margin-bottom:16px;">
+      <div class="label">FON RADAR</div>
+      <div class="sub">Mevcut fon verilerinden oluşturulan izleme göstergesidir; kesin getiri veya fiyat tahmini değildir.</div>
+    </div>
+    ${rows.length ? `<div class="table-wrap"><table>
+      <thead><tr><th>Fon</th><th>Kâr/Zarar</th><th>Radar Skoru</th><th>Durum</th></tr></thead>
+      <tbody>${rows.map(x=>`<tr>
+        <td><span class="kod-pill">${x.kod}</span></td>
+        <td class="${pctClass(x.kzPct)}">${fmtPct(x.kzPct)}</td>
+        <td><b>${x.score}/100</b></td>
+        <td>${x.score>=70?"Güçlü radar":x.score>=45?"İzleme":"Normal"}</td>
+      </tr>`).join("")}</tbody>
+    </table></div>` : '<div class="empty-chart">Fon verisi yok.</div>'}`;
+  return panel;
+}
+
 
 /* ============================= OVERVIEW ============================= */
 function renderOverview(){
