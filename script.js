@@ -1444,17 +1444,127 @@ function setRadarList(type,rows){
   const key=type==="stock"?"portfoy_radar_stocks":"portfoy_radar_funds";
   localStorage.setItem(key,JSON.stringify(rows));
 }
+function getRadarSoldList(type){
+  const key=type==="stock" ? "portfoy_radar_stock_sold" : "portfoy_radar_fund_sold";
+  try{
+    const data=JSON.parse(localStorage.getItem(key)||"[]");
+    return Array.isArray(data)?data:[];
+  }catch(e){return [];}
+}
+function setRadarSoldList(type,rows){
+  const key=type==="stock"?"portfoy_radar_stock_sold":"portfoy_radar_fund_sold";
+  localStorage.setItem(key,JSON.stringify(rows));
+}
 function radarComputed(r){
   const adet=Number(r.adet)||0, alis=Number(r.alis)||0, guncel=Number(r.guncel)||0;
   const maliyet=adet*alis, guncelDeger=adet*guncel, karZarar=guncelDeger-maliyet;
   return {maliyet,guncelDeger,karZarar,karZararPct:maliyet?karZarar/maliyet:0};
 }
+
+function renderRadarEditDrawer(type,index,rows){
+  const isStock=type==="stock";
+  const label=isStock?"Hisse":"Fon";
+  const r=rows[index];
+  if(!r) return;
+  const form=document.createElement("div");
+  form.className="drawer open";
+  form.style.setProperty("--accent", isStock ? "#d9a441" : "#3fb6a8");
+  form.innerHTML=`
+    <div class="drawer-head"><b>${label} Düzenle</b><button type="button" class="btn" id="closeRadarEdit">Kapat</button></div>
+    <div class="drawer-body">
+      <div class="field-grid">
+        <div class="field"><label>Kod</label><input class="input" id="reKod" value="${String(r.kod||"").replace(/"/g,'&quot;')}"></div>
+        <div class="field"><label>Adet</label><input class="input" type="number" step="any" id="reAdet" value="${r.adet??""}"></div>
+        <div class="field"><label>Alış Fiyatı</label><input class="input" type="number" step="any" id="reAlis" value="${r.alis??""}"></div>
+        <div class="field"><label>Alış Tarihi</label><input class="input" type="date" id="reTarih" value="${r.alisTarihi||""}"></div>
+        <div class="field"><label>Güncel Fiyat</label><input class="input" type="number" step="any" id="reGuncel" value="${r.guncel??""}"></div>
+      </div>
+    </div>
+    <div class="drawer-actions">
+      <button type="button" class="btn btn-accent" id="saveRadarEdit">Güncelle</button>
+      <button type="button" class="btn" id="cancelRadarEdit">Vazgeç</button>
+    </div>`;
+  document.body.appendChild(form);
+
+  const close=()=>form.remove();
+  form.querySelector("#closeRadarEdit").onclick=close;
+  form.querySelector("#cancelRadarEdit").onclick=close;
+  form.querySelector("#saveRadarEdit").onclick=()=>{
+    const kod=form.querySelector("#reKod").value.trim();
+    const adet=Number(form.querySelector("#reAdet").value);
+    const alis=Number(form.querySelector("#reAlis").value);
+    const tarih=form.querySelector("#reTarih").value;
+    const guncel=Number(form.querySelector("#reGuncel").value);
+    if(!kod || !Number.isFinite(adet) || adet<=0 || !Number.isFinite(alis) || alis<0 || !tarih || !Number.isFinite(guncel) || guncel<0){
+      alert("Kod, adet, alış fiyatı, alış tarihi ve güncel fiyatı doğru girin.");
+      return;
+    }
+    rows[index]={...rows[index],kod,adet,alis,alisTarihi:tarih,guncel};
+    setRadarList(type,rows);
+    close();
+    renderMain();
+  };
+}
+
+function renderRadarSellDrawer(type,index,rows){
+  const isStock=type==="stock";
+  const label=isStock?"Hisse":"Fon";
+  const currency="TL";
+  const row=rows[index];
+  if(!row) return;
+  const drawer=document.createElement("div");
+  drawer.className="drawer open";
+  drawer.style.setProperty("--accent", isStock ? "#d9a441" : "#3fb6a8");
+  drawer.innerHTML=`
+    <div class="drawer-head"><b>💰 ${row.kod||label} — Satış</b><button type="button" class="btn" id="closeRadarSell">Kapat</button></div>
+    <div class="drawer-body">
+      <p style="font-size:12.5px;color:var(--text-soft);">Elinizde ${Number(row.adet||0).toLocaleString("tr-TR")} adet var. Satış bilgilerini girin.</p>
+      <div class="field-grid">
+        <div class="field"><label>Satılan Adet</label><input class="input" type="number" step="any" id="rsAdet" value="${row.adet}" max="${row.adet}"></div>
+        <div class="field"><label>Satış Fiyatı</label><input class="input" type="number" step="any" id="rsFiyat"></div>
+        <div class="field"><label>Satış Tarihi</label><input class="input" type="date" id="rsTarih" value="${new Date().toISOString().slice(0,10)}"></div>
+      </div>
+    </div>
+    <div class="drawer-actions">
+      <button type="button" class="btn btn-accent" id="confirmRadarSell">Satışı Kaydet</button>
+      <button type="button" class="btn" id="cancelRadarSell">Vazgeç</button>
+    </div>`;
+  document.body.appendChild(drawer);
+
+  const close=()=>drawer.remove();
+  drawer.querySelector("#closeRadarSell").onclick=close;
+  drawer.querySelector("#cancelRadarSell").onclick=close;
+  drawer.querySelector("#confirmRadarSell").onclick=()=>{
+    const adet=Number(drawer.querySelector("#rsAdet").value);
+    const fiyat=Number(drawer.querySelector("#rsFiyat").value);
+    const tarih=drawer.querySelector("#rsTarih").value;
+    if(!Number.isFinite(adet)||adet<=0||adet>Number(row.adet)||!Number.isFinite(fiyat)||fiyat<0||!tarih){
+      alert("Satılan adet, satış fiyatı ve satış tarihi doğru girin.");
+      return;
+    }
+    const karZarar=(fiyat-Number(row.alis||0))*adet;
+    const karZararPct=(Number(row.alis||0)*adet) ? karZarar/(Number(row.alis||0)*adet) : 0;
+    const sold=getRadarSoldList(type);
+    sold.push({
+      id:Date.now()+Math.random(), kod:row.kod, adet, alis:Number(row.alis||0),
+      alisTarihi:row.alisTarihi||"", satisFiyati:fiyat, satisTarihi:tarih,
+      karZarar, karZararPct
+    });
+    setRadarSoldList(type,sold);
+    if(adet>=Number(row.adet||0)) rows.splice(index,1);
+    else rows[index]={...row,adet:Number(row.adet)-adet};
+    setRadarList(type,rows);
+    close();
+    renderMain();
+  };
+}
+
 function renderRadarEditor(type){
   const isStock=type==="stock";
   const label=isStock?"Hisse":"Fon";
   const title=isStock?"🚀 Patlama Potansiyeli — Hisse Radar":"🚀 Patlama Potansiyeli — Fon Radar";
-  const currency=isStock?"TL":"TL";
   const rows=getRadarList(type);
+  const sold=getRadarSoldList(type);
   const wrap=document.createElement("div");
   wrap.className="panel active";
 
@@ -1463,19 +1573,33 @@ function renderRadarEditor(type){
     return `<tr>
       <td><span class="kod-pill">${r.kod||"—"}</span></td>
       <td>${Number(r.adet||0).toLocaleString("tr-TR")}</td>
-      <td>${fmtMoneyPlain(Number(r.alis)||0,currency)}</td>
+      <td>${fmtMoneyPlain(Number(r.alis)||0,"TL")}</td>
       <td>${r.alisTarihi||"—"}</td>
-      <td>${fmtMoneyPlain(Number(r.guncel)||0,currency)}</td>
-      <td>${fmtMoneyPlain(c.maliyet,currency)}</td>
-      <td>${fmtMoneyPlain(c.guncelDeger,currency)}</td>
-      <td class="${pctClass(c.karZarar)}">${fmtMoney(c.karZarar,currency)}</td>
-      <td class="${pctClass(c.karZararPct)}">${fmtPct(c.karZararPct)}</td>
+      <td>${fmtMoneyPlain(Number(r.guncel)||0,"TL")}</td>
+      <td>${fmtMoneyPlain(c.maliyet,"TL")}</td>
+      <td>${fmtMoneyPlain(c.guncelDeger,"TL")}</td>
+      <td class="${pctClass(c.karZarar)}">${fmtMoney(c.karZarar,"TL")}</td>
+      <td class="${pctClass(c.karZararPct)}" style="font-weight:700;">${c.karZararPct>=0?"+":""}${(c.karZararPct*100).toFixed(2)}%</td>
       <td class="row-actions">
-        <button class="btn btn-sm" data-ract="edit" data-i="${i}">Düzenle</button>
-        <button class="btn btn-sm btn-danger" data-ract="del" data-i="${i}">Sil</button>
+        <button type="button" class="btn btn-sm" data-ract="edit" data-i="${i}">Düzenle</button>
+        <button type="button" class="btn btn-sm btn-accent" data-ract="sell" data-i="${i}">Sat</button>
+        <button type="button" class="btn btn-sm btn-danger" data-ract="del" data-i="${i}">Sil</button>
       </td>
     </tr>`;
   }).join(""):`<tr class="empty-row"><td colspan="10">Henüz ${label.toLowerCase()} eklenmedi.</td></tr>`;
+
+  const soldBody=sold.length?sold.map(s=>`
+    <tr>
+      <td><span class="kod-pill">${s.kod||"—"}</span></td>
+      <td>${Number(s.adet||0).toLocaleString("tr-TR")}</td>
+      <td>${fmtMoneyPlain(Number(s.alis)||0,"TL")}</td>
+      <td>${s.alisTarihi||"—"}</td>
+      <td>${fmtMoneyPlain(Number(s.satisFiyati)||0,"TL")}</td>
+      <td>${s.satisTarihi||"—"}</td>
+      <td class="${pctClass(Number(s.karZarar)||0)}">${fmtMoney(Number(s.karZarar)||0,"TL")}</td>
+      <td class="${pctClass(Number(s.karZararPct)||0)}">${fmtPct(Number(s.karZararPct)||0)}</td>
+      <td class="row-actions"><button type="button" class="btn btn-sm btn-danger" data-rsold="${s.id}">Sil</button></td>
+    </tr>`).join(""):`<tr class="empty-row"><td colspan="9">Henüz satılan ${label.toLowerCase()} yok.</td></tr>`;
 
   wrap.innerHTML=`
     <div class="section-title">${title}</div>
@@ -1493,6 +1617,11 @@ function renderRadarEditor(type){
       </tr></thead>
       <tbody>${body}</tbody>
     </table></div>
+    <div class="section-title" style="margin-top:22px;">Satılanlar</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Kod</th><th>Adet</th><th>Alış Fiy.</th><th>Alış Tar.</th><th>Satış Fiy.</th><th>Satış Tar.</th><th>Kâr/Zarar</th><th>Kâr/Zarar %</th><th>İşlem</th></tr></thead>
+      <tbody>${soldBody}</tbody>
+    </table></div>
     <div class="section-title" style="margin-top:22px;">Grafikler</div>
     <div class="chart-grid">
       <div class="chart-card"><h4>Portföy Dağılımı</h4><div class="canvas-box" id="radar-${type}-pie"></div></div>
@@ -1509,26 +1638,14 @@ function renderRadarEditor(type){
     if(btn.dataset.ract==="del"){
       rows.splice(i,1); setRadarList(type,rows); renderMain(); return;
     }
-    const r=rows[i];
-    const form=document.createElement("div");
-    form.className="drawer open";
-    form.innerHTML=`
-      <div class="drawer-head"><b>${label} Düzenle</b><button class="btn" id="closeRadarEdit">Kapat</button></div>
-      <div class="drawer-body">
-        <label>Kod<input class="input" id="reKod" value="${r.kod||""}"></label>
-        <label>Adet<input class="input" type="number" step="any" id="reAdet" value="${r.adet??""}"></label>
-        <label>Alış Fiyatı<input class="input" type="number" step="any" id="reAlis" value="${r.alis??""}"></label>
-        <label>Alış Tarihi<input class="input" type="date" id="reTarih" value="${r.alisTarihi||""}"></label>
-        <label>Güncel Fiyat<input class="input" type="number" step="any" id="reGuncel" value="${r.guncel??""}"></label>
-        <label>Satış Fiyatı (isteğe bağlı)<input class="input" type="number" step="any" id="reSatis" value="${r.satis??""}"></label>
-        <button class="btn btn-accent" id="saveRadarEdit">Güncelle</button>
-      </div>`;
-    document.body.appendChild(form);
-    form.querySelector("#closeRadarEdit").onclick=()=>form.remove();
-    form.querySelector("#saveRadarEdit").onclick=()=>{
-      rows[i]={...r,kod:form.querySelector("#reKod").value.trim(),adet:form.querySelector("#reAdet").value,alis:form.querySelector("#reAlis").value,alisTarihi:form.querySelector("#reTarih").value,guncel:form.querySelector("#reGuncel").value,satis:form.querySelector("#reSatis").value};
-      setRadarList(type,rows); form.remove(); renderMain();
-    };
+    if(btn.dataset.ract==="edit"){ renderRadarEditDrawer(type,i,rows); return; }
+    if(btn.dataset.ract==="sell"){ renderRadarSellDrawer(type,i,rows); return; }
+  });
+
+  wrap.querySelectorAll("[data-rsold]").forEach(btn=>btn.onclick=()=>{
+    if(!confirm("Bu radar satış kaydı silinsin mi?")) return;
+    setRadarSoldList(type,sold.filter(s=>String(s.id)!==String(btn.dataset.rsold)));
+    renderMain();
   });
 
   requestAnimationFrame(()=>{
