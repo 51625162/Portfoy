@@ -92,7 +92,7 @@ let nextId = {bist:6, abd:6, fon:6, kripto:6};
 let nextSoldId = {bist:1, abd:1, fon:1, kripto:1};
 let usdTry = Number(localStorage.getItem("portfoy_usdTry")) || 34.50; // Manuel USD/TRY
 
-const TAB_ORDER = ["bist","abd","fon","kripto","sold","overview","radar","fundRadar","ceiling"];
+const TAB_ORDER = ["bist","abd","fon","kripto","sold","overview","ceiling"];
 let activeTab = "bist";
 let editingId = {bist:null, abd:null, fon:null, kripto:null};
 let searchTerm = {bist:"", abd:"", fon:"", kripto:""};
@@ -479,7 +479,7 @@ function renderTabs(){
     <input id="usdTryInput" type="number" min="0.0001" step="0.01" value="${usdTry.toFixed(2)}" style="width:100px;">
     <button class="btn btn-sm">Güncelle</button>`;
   fx.querySelector("button").onclick = () => setUsdTry(fx.querySelector("input").value);
-  const labels = {bist:"BIST Portföy", abd:"ABD Portföy", fon:"Fon Portföy", kripto:"Kripto Portföy", sold:"Satılanlar / Ana Bakiye", overview:"Genel Bakış", radar:"🚀 Hisse Radar", fundRadar:"🚀 Fon Radar", ceiling:"🔥 Tavan Hisseler"};
+  const labels = {bist:"BIST Portföy", abd:"ABD Portföy", fon:"Fon Portföy", kripto:"Kripto Portföy", sold:"Satılanlar / Ana Bakiye", overview:"Genel Bakış", ceiling:"🔥 Tavan Hisseler"};
   TAB_ORDER.forEach(key => {
     const btn = document.createElement("button");
     btn.textContent = labels[key];
@@ -493,8 +493,6 @@ function getTabAccent(key){
   if(key==="overview") return "#e7ebee";
   if(key==="sold") return "#22b573";
   if(key==="macro") return "#c2703a";
-  if(key==="radar") return "#e0954f";
-  if(key==="fundRadar") return "#8b6fd1";
   if(key==="ceiling") return "#e0554f";
   return PORTFOLIOS[key].accent;
 }
@@ -508,8 +506,6 @@ function renderMain(){
   try{
     const panel = activeTab === "overview" ? renderOverview()
       : activeTab === "sold" ? renderSoldBalancePanel()
-      : activeTab === "radar" ? renderRadarPanel()
-      : activeTab === "fundRadar" ? renderFundRadarPanel()
       : activeTab === "ceiling" ? renderCeilingPanel()
       : renderPortfolioPanel(activeTab);
     main.innerHTML = "";
@@ -1707,10 +1703,6 @@ function renderRadarEditor(type){
 }
 
 
-function renderRadarPanel(){ return renderRadarEditor("stock"); }
-
-
-function renderFundRadarPanel(){ return renderRadarEditor("fund"); }
 function renderCeilingPanel(){ return renderRadarEditor("ceiling"); }
 
 
