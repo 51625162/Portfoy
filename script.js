@@ -24,7 +24,6 @@ const PORTFOLIOS = {
     ],
     history:[],
     sold:[],
-    targetWeights: {ALFA:30, BETA:25, DELTA:25, KATILIM:20},
   },
   abd: {
     label:"ABD Portföy", currency:"$", accent:"#4f8fd1", idLabel:"Hisse Kodu",
@@ -99,7 +98,6 @@ let searchTerm = {bist:"", abd:"", fon:"", kripto:""};
 let sortState = {bist:{col:null,dir:1}, abd:{col:null,dir:1}, fon:{col:null,dir:1}, kripto:{col:null,dir:1}};
 let historyEditor = null; // {key, rowId} açık olan fiyat geçmişi paneli
 let sellEditor = null; // {key, rowId} açık olan satış paneli
-let categoryFilter = {bist:""};
 
 /* ---------- Makroekonomik Veriler (bağımsız bölüm) ---------- */
 let macroNextId = 1;
@@ -145,7 +143,6 @@ function buildPayload(){
     rows: { bist:PORTFOLIOS.bist.rows, abd:PORTFOLIOS.abd.rows, fon:PORTFOLIOS.fon.rows, kripto:PORTFOLIOS.kripto.rows },
     history: { bist:PORTFOLIOS.bist.history, abd:PORTFOLIOS.abd.history, fon:PORTFOLIOS.fon.history, kripto:PORTFOLIOS.kripto.history },
     sold: { bist:PORTFOLIOS.bist.sold, abd:PORTFOLIOS.abd.sold, fon:PORTFOLIOS.fon.sold, kripto:PORTFOLIOS.kripto.sold },
-    bistTargetWeights: PORTFOLIOS.bist.targetWeights,
     macro: MACRO.categories,
     macroNextId,
   };
@@ -169,7 +166,6 @@ function applyPayload(payload){
   if(payload.sold){
     ["bist","abd","fon","kripto"].forEach(k => { if(Array.isArray(payload.sold[k])) PORTFOLIOS[k].sold = payload.sold[k]; });
   }
-  if(payload.bistTargetWeights) PORTFOLIOS.bist.targetWeights = payload.bistTargetWeights;
   if(Array.isArray(payload.macro)) MACRO.categories = payload.macro;
   if(payload.macroNextId) macroNextId = payload.macroNextId;
   sanitizeIds();
@@ -407,9 +403,10 @@ function pctChange(current, past){
 }
 function computed(row, key){
   const maliyet = row.adet*row.alis;
-  const guncelDeger = row.adet*row.guncel;
-  const karZarar = guncelDeger-maliyet;
-  const karZararPct = safeDiv(karZarar, maliyet);
+  const fiyatVar = row.guncel!==null && row.guncel!==undefined && row.guncel!=="" && Number.isFinite(Number(row.guncel));
+  const guncelDeger = fiyatVar ? row.adet*Number(row.guncel) : null;
+  const karZarar = fiyatVar ? guncelDeger-maliyet : null;
+  const karZararPct = fiyatVar ? safeDiv(karZarar, maliyet) : null;
   return {maliyet,guncelDeger,karZarar,karZararPct};
 }
 function safeDiv(a,b){ return b ? a/b : null; }
@@ -634,7 +631,6 @@ function renderPortfolioPanel(key){
   `;
   panel.appendChild(cards);
 
-  if(key==="bist") panel.appendChild(renderWeightSection());
 
   // ---- toolbar ----
   const toolbar = document.createElement("div");
@@ -657,15 +653,6 @@ function renderPortfolioPanel(key){
     renderMain();
   };
   left.appendChild(search); left.appendChild(exportBtn); left.appendChild(clearHistBtn);
-  if(key==="bist"){
-    const catFilter = document.createElement("select");
-    catFilter.className = "search";
-    catFilter.innerHTML = `<option value="">Tüm Kategoriler</option>` +
-      Object.keys(BIST_CATEGORIES).map(k=>`<option value="${k}" ${categoryFilter.bist===k?'selected':''}>${k} · Risk ${BIST_CATEGORIES[k].risk}/10</option>`).join("");
-    catFilter.value = categoryFilter.bist;
-    catFilter.onchange = e => { categoryFilter.bist = e.target.value; renderMain(); };
-    left.appendChild(catFilter);
-  }
   const addBtn = document.createElement("button");
   addBtn.className="btn btn-accent"; addBtn.textContent="+ Yeni "+ (key==="fon"?"Fon":key==="kripto"?"Kripto":"Hisse");
   addBtn.onclick = () => { editingId[key]="new"; renderMain(); };
@@ -673,21 +660,7 @@ function renderPortfolioPanel(key){
   panel.appendChild(toolbar);
 
   // ---- table ----
-  if(key==="bist"){
-    const groups = ["ALFA","BETA","DELTA","KATILIM"];
-    groups.forEach(group => {
-      const section = document.createElement("div");
-      section.className = "category-section";
-      section.innerHTML = `<div class="section-title" style="margin-top:18px;">${group}</div>`;
-      const originalRows = PORTFOLIOS.bist.rows;
-      PORTFOLIOS.bist.rows = originalRows.filter(r => r.kategori === group);
-      section.appendChild(renderTable(key));
-      PORTFOLIOS.bist.rows = originalRows;
-      panel.appendChild(section);
-    });
-  } else {
-    panel.appendChild(renderTable(key));
-  }
+  panel.appendChild(renderTable(key));
 
   // ---- drawer ----
   if(editingId[key]!==null){ panel.appendChild(renderDrawer(key, editingId[key])); }
@@ -703,89 +676,6 @@ function renderPortfolioPanel(key){
   return panel;
 }
 
-const BIST_CATEGORIES = {
-  ALFA: {risk:9, aciklama:"Yüksek risk, yüksek potansiyel; Yıldız Pazar/Ana Pazar'daki daha oynak şirketler.", color:"#e0554f"},
-  BETA: {risk:8, aciklama:"Yeni halka arzlar ve büyüme hikâyeleri; fırsat odaklı.", color:"#e0954f"},
-  KATILIM: {risk:4, aciklama:"Katılım endeksi, faizsiz yatırım prensipleri.", color:"#3fb6a8"},
-  DELTA: {risk:5, aciklama:"BIST 100 içindeki köklü, bilanço gücü yüksek şirketler; daha düşük oynaklık hedefi.", color:"#4f8fd1"},
-};
-
-function renderWeightSection(){
-  const p = PORTFOLIOS.bist;
-  const enriched = p.rows.map(r => ({row:r, c: computed(r,"bist")}));
-  const totalDeger = enriched.reduce((s,e)=>s+e.c.guncelDeger, 0);
-
-  const cats = Object.keys(BIST_CATEGORIES);
-  const current = {};
-  cats.forEach(c => current[c] = 0);
-  let kategorisiz = 0;
-  enriched.forEach(e => {
-    const k = e.row.kategori;
-    if(k && current.hasOwnProperty(k)) current[k] += e.c.guncelDeger;
-    else kategorisiz += e.c.guncelDeger;
-  });
-
-  const targetSum = cats.reduce((s,c)=> s + (p.targetWeights[c]||0), 0);
-
-  const wrap = document.createElement("div");
-  wrap.className = "weight-section";
-  wrap.innerHTML = `
-    <div class="section-title" style="margin-top:0;">Kategori Ağırlıkları — Hedef vs Mevcut
-      ${targetSum!==100 ? `<span style="color:var(--red); font-weight:400; font-size:12px; margin-left:8px;">(Hedefler toplamı %${targetSum}, 100 olmalı)</span>` : ""}
-    </div>
-    <div class="weight-grid">
-      ${cats.map(c => {
-        const mevcutPct = totalDeger ? (current[c]/totalDeger*100) : 0;
-        const hedefPct = p.targetWeights[c] || 0;
-        const fark = mevcutPct - hedefPct;
-        const farkClass = Math.abs(fark) <= 3 ? "pos" : Math.abs(fark) <= 7 ? "" : "neg";
-        const cfg = BIST_CATEGORIES[c];
-        return `
-          <div class="weight-row">
-            <div class="weight-label" style="color:${cfg.color};">${c}
-              </div>
-            <div class="weight-target">
-              <label>Hedef</label>
-              <input type="number" class="weight-input" min="0" max="100" step="1" value="${hedefPct}" data-cat="${c}">%
-            </div>
-            <div class="weight-bar-wrap">
-              <div class="weight-bar-track">
-                <div class="weight-bar-target" style="left:${Math.min(hedefPct,100)}%;"></div>
-                <div class="weight-bar-fill" style="width:${Math.min(mevcutPct,100)}%; background:${cfg.color};"></div>
-              </div>
-              <div class="weight-bar-labels"><span>Mevcut: %${mevcutPct.toFixed(1)}</span><span class="${farkClass}">${fark>0?'+':''}${fark.toFixed(1)} puan</span></div>
-            </div>
-          </div>`;
-      }).join("")}
-      ${kategorisiz>0 ? `
-        <div class="weight-row">
-          <div class="weight-label" style="color:var(--text-soft);">Kategorisiz</div>
-          <div class="weight-target"><span style="color:var(--text-soft); font-size:12px;">Hedef yok</span></div>
-          <div class="weight-bar-wrap">
-            <div class="weight-bar-track"><div class="weight-bar-fill" style="width:${totalDeger?Math.min(kategorisiz/totalDeger*100,100):0}%; background:var(--text-soft);"></div></div>
-            <div class="weight-bar-labels"><span>Mevcut: %${totalDeger?(kategorisiz/totalDeger*100).toFixed(1):'0.0'}</span></div>
-          </div>
-        </div>` : ""}
-    </div>
-  `;
-
-  wrap.querySelectorAll(".weight-input").forEach(inp => {
-    inp.addEventListener("change", () => {
-      p.targetWeights[inp.dataset.cat] = Number(inp.value)||0;
-      saveState();
-      renderMain();
-    });
-  });
-
-  return wrap;
-}
-
-function renderKategoriBadge(kategori){
-  if(!kategori || !BIST_CATEGORIES[kategori]) return `<span style="color:var(--text-soft);">—</span>`;
-  const c = BIST_CATEGORIES[kategori];
-  return `<span class="kategori-badge" style="background:${c.color}22; color:${c.color}; border-color:${c.color}55;" title="${c.aciklama} (Risk: ${c.risk}/10)">${kategori} · ${c.risk}/10</span>`;
-}
-
 function getCols(key){
   const base = [
     {key:"kod", label:"Kod"}, {key:"adet", label:"Adet"}, {key:"alis", label:"Alış Fiy."},
@@ -793,9 +683,6 @@ function getCols(key){
     {key:"maliyet", label:"Maliyet", derived:true}, {key:"guncelDeger", label:"Güncel Değer", derived:true},
     {key:"karZarar", label:"Kar/Zarar", derived:true}, {key:"karZararPct", label:"Kar/Zarar %", derived:true},
   ];
-  if(key==="bist"){
-    base.splice(1, 0, {key:"kategori", label:"Kategori"});
-  }
   return base;
 }
 
@@ -845,7 +732,6 @@ function renderTable(key){
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td><span class="kod-pill">${row.kod}</span>${badge}</td>
-        ${key==="bist" ? `<td>${renderKategoriBadge(row.kategori)}</td>` : ""}
         <td>${row.adet.toLocaleString("tr-TR")}</td>
         <td>${fmtMoneyPlain(row.alis,p.currency)}</td>
         <td>${row.alisTarihi}</td>
@@ -891,12 +777,8 @@ function getFormFields(key){
     {key:"adet", label:"Adet", type:"number"},
     {key:"alis", label:"Alış Fiyatı", type:"number"},
     {key:"alisTarihi", label:"Alış Tarihi", type:"date"},
-    {key:"guncel", label:"Güncel Fiyat", type:"number"},
+    {key:"guncel", label:"Güncel Fiyat (opsiyonel)", type:"number", optional:true},
   ];
-  if(key==="bist"){
-    base.push({key:"kategori", label:"Kategori (opsiyonel)", type:"select", optional:true,
-      options:[{value:"", label:"— Seçiniz —"}, ...Object.keys(BIST_CATEGORIES).map(k=>({value:k, label:`${k} · Risk ${BIST_CATEGORIES[k].risk}/10`}))]});
-  }
   return base;
 }
 
@@ -1185,7 +1067,7 @@ function saveRow(key, id, grid){
   inputs.forEach(inp => {
     let val = inp.value;
     if(!val && !inp.dataset.optional){ inp.style.borderColor="var(--red)"; valid=false; } else inp.style.borderColor="";
-    if(inp.type==="number") val = Number(val);
+    if(inp.type==="number") val = val==="" && inp.dataset.optional ? null : Number(val);
     data[inp.dataset.field] = val;
   });
   if(!valid) return;
