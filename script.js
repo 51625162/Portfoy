@@ -16,11 +16,11 @@ const PORTFOLIOS = {
   bist: {
     label:"BIST Portföy", currency:"TL", accent:"#d9a441", idLabel:"Hisse Kodu",
     rows:[
-      {id:1, kod:"ASELS", adet:500, alis:62.50, alisTarihi:"2025-03-10", guncel:68.90, kategori:"ALFA"},
-      {id:2, kod:"THYAO", adet:200, alis:275.00, alisTarihi:"2025-06-02", guncel:298.50, kategori:"DELTA"},
-      {id:3, kod:"OTOKAR", adet:50, alis:1450.00, alisTarihi:"2024-11-20", guncel:1620.00, kategori:"DELTA"},
-      {id:4, kod:"LOGO", adet:300, alis:38.20, alisTarihi:"2025-01-15", guncel:41.10, kategori:"BETA"},
-      {id:5, kod:"PGSUS", adet:100, alis:410.00, alisTarihi:"2025-05-05", guncel:455.00, kategori:"ALFA"},
+      {id:1, kod:"ASELS", adet:500, alis:62.50, alisTarihi:"2025-03-10", guncel:68.90},
+      {id:2, kod:"THYAO", adet:200, alis:275.00, alisTarihi:"2025-06-02", guncel:298.50},
+      {id:3, kod:"OTOKAR", adet:50, alis:1450.00, alisTarihi:"2024-11-20", guncel:1620.00},
+      {id:4, kod:"LOGO", adet:300, alis:38.20, alisTarihi:"2025-01-15", guncel:41.10},
+      {id:5, kod:"PGSUS", adet:100, alis:410.00, alisTarihi:"2025-05-05", guncel:455.00},
     ],
     history:[],
     sold:[],
@@ -712,7 +712,6 @@ function renderTable(key){
   // filter
   const term = searchTerm[key].toLocaleLowerCase("tr");
   if(term) enriched = enriched.filter(e => e.row.kod.toLocaleLowerCase("tr").includes(term));
-  if(key==="bist" && categoryFilter.bist) enriched = enriched.filter(e => e.row.kategori===categoryFilter.bist);
   // sort
   const {col,dir} = sortState[key];
   if(col){
@@ -825,12 +824,6 @@ function renderDrawer(key, id){
   });
   drawer.appendChild(grid);
 
-  if(key==="bist"){
-    const note = document.createElement("p");
-    note.style.cssText = "font-size:12px; color:var(--text-soft); margin:10px 2px 0;";
-    note.innerHTML = Object.entries(BIST_CATEGORIES).map(([k,c])=>`<b>${k}</b> (${c.risk}/10): ${c.aciklama}`).join("<br>");
-    drawer.appendChild(note);
-  }
 
   const actions = document.createElement("div");
   actions.className="drawer-actions";
@@ -1236,20 +1229,7 @@ function drawCharts(key){
 
   const perfBox = document.getElementById(`box-${key}-perf`);
   if(perfBox){
-    if(key==="bist"){
-      const groups = ["ALFA","BETA","DELTA","KATILIM"];
-      const data = groups.map(group => {
-        const rows = p.rows.filter(r => r.kategori === group);
-        const maliyet = rows.reduce((sum,r) => sum + (Number(r.adet)||0) * (Number(r.alis)||0), 0);
-        const kar = rows.reduce((sum,r) => sum + ((Number(r.guncel)||0) - (Number(r.alis)||0)) * (Number(r.adet)||0), 0);
-        return maliyet ? +(kar / maliyet * 100).toFixed(2) : 0;
-      });
-      svgBarGrouped(perfBox, groups, [
-        {label:"Kâr/Zarar", data, color:v=>v>=0?"#22b573":"#e0554f"}
-      ], {suffix:"%"});
-    } else {
-      perfBox.innerHTML = `<div class="empty-chart">Kategori performansı yalnızca BIST için gösterilir.</div>`;
-    }
+    perfBox.innerHTML = `<div class="empty-chart">Kategori performans grafiği kaldırıldı.</div>`;
   }
 
   const cvBox = document.getElementById(`box-${key}-cv`);
@@ -1259,19 +1239,7 @@ function drawCharts(key){
   ], {suffix:""});
 }
 
-function getPortfolioRiskLevel(){
-  const rows = PORTFOLIOS.bist.rows;
-  const weights = {ALFA:0,BETA:0,DELTA:0,KATILIM:0};
-  let total = 0;
-  rows.forEach(r => {
-    const value = (Number(r.adet)||0) * (Number(r.guncel)||0);
-    total += value;
-    if(weights[r.kategori] !== undefined) weights[r.kategori] += value;
-  });
-  if(!total) return {label:"Veri yok", score:0};
-  const score = (weights.ALFA/total)*9 + (weights.BETA/total)*8 + (weights.DELTA/total)*5 + (weights.KATILIM/total)*4;
-  return {score, label: score >= 7 ? "Yüksek" : score >= 5 ? "Orta" : "Düşük"};
-}
+function getPortfolioRiskLevel(){ return {label:"—", score:0}; }
 
 function renderPortfolioSummary(){
   const wrap = document.createElement("div");
