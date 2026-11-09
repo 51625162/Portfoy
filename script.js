@@ -414,7 +414,16 @@ function safeDiv(a,b){ return b ? a/b : null; }
 function portfolioTotals(key){
   const p = PORTFOLIOS[key];
   let maliyet=0, guncelDeger=0;
-  p.rows.forEach(r => { const c = computed(r,key); maliyet+=c.maliyet; guncelDeger+=c.guncelDeger; });
+  const allPricesAvailable = p.rows.every(r =>
+    r.guncel!==null && r.guncel!==undefined && r.guncel!=="" && Number.isFinite(Number(r.guncel))
+  );
+  p.rows.forEach(r => {
+    const c = computed(r,key);
+    maliyet += c.maliyet;
+    if(c.guncelDeger!==null) guncelDeger += c.guncelDeger;
+  });
+  // P/L is only meaningful when every active position has a current price.
+  if(!allPricesAvailable) return {maliyet, guncelDeger:null, karZarar:null, karZararPct:null};
   const karZarar = guncelDeger-maliyet;
   const karZararPct = safeDiv(karZarar, maliyet);
   return {maliyet, guncelDeger, karZarar, karZararPct};
@@ -738,7 +747,7 @@ function renderTable(key){
         <td>${fmtMoneyPlain(c.maliyet,p.currency)}</td>
         <td>${fmtMoneyPlain(c.guncelDeger,p.currency)}</td>
         <td class="${pctClass(c.karZarar)}">${fmtMoney(c.karZarar,p.currency)}</td>
-        <td class="${c.karZararPct >= 0 ? "pos" : "neg"}" style="font-weight:700;">${c.karZararPct >= 0 ? "+" : ""}${(c.karZararPct*100).toFixed(2)}%</td>
+        <td class="${c.karZararPct===null ? "" : c.karZararPct >= 0 ? "pos" : "neg"}" style="font-weight:700;">${c.karZararPct===null ? "—" : (c.karZararPct >= 0 ? "+" : "") + (c.karZararPct*100).toFixed(2) + "%"}</td>
         <td class="row-actions">
           <button class="btn btn-sm" data-act="hist" data-id="${row.id}">Geçmiş</button>
           <button class="btn btn-sm" data-act="edit" data-id="${row.id}">Düzenle</button>
